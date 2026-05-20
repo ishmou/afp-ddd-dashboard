@@ -1,3 +1,68 @@
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  AFP DDD — Dashboard Visibilité Clients                                      ║
+║  Version: 2.0 — Mai 2026                                                     ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  ARCHITECTURE (single-file HTML)                                             ║
+║                                                                              ║
+║  ├── <style>        CSS complet (variables, composants, layout)              ║
+║  │    ├── /* ── TOKENS ── */      Variables CSS (couleurs, typo, spacing)   ║
+║  │    ├── /* ── LAYOUT ── */      Structure générale, header, main          ║
+║  │    ├── /* ── KPI GRID ── */    Grille des 9 indicateurs                  ║
+║  │    ├── /* ── TABLE ── */       Tableau des campagnes                      ║
+║  │    ├── /* ── DETAIL ── */      Panneau de détail client                   ║
+║  │    ├── /* ── EXEC ── */        Executive Performance Panel               ║
+║  │    ├── /* ── MODALS ── */      Modals (ajout, OneDrive, etc.)            ║
+║  │    └── /* ── LOGIN ── */       Écran de login                            ║
+║  │                                                                           ║
+║  ├── <body>                                                                  ║
+║  │    ├── #loginScreen            Écran de login (z-index 9999)             ║
+║  │    ├── .app-header             Header AFP avec badge source               ║
+║  │    ├── #overview               Vue d'ensemble + KPI grid                  ║
+║  │    ├── #execSection            Executive Performance Panel               ║
+║  │    ├── #clientsSection         Tableau des campagnes + filtres            ║
+║  │    ├── #detailPanel            Panneau de détail (slide-in)              ║
+║  │    ├── #mgmtSection            Import/Export données                      ║
+║  │    ├── #aiSection              Requêtes IA (Anthropic API)               ║
+║  │    └── Modals overlay          (addModal, oneDriveModal, etc.)           ║
+║  │                                                                           ║
+║  └── <script>                                                                ║
+║       ├── DONNEES_INITIALES       Fallback données (stub vide)              ║
+║       ├── BOOST_CONFIG            Clients avec option BOOST                  ║
+║       ├── STATE                   État global de l'application               ║
+║       ├── normalizeClient()       Calcul scores et totalPickups             ║
+║       ├── loadData() / loadFromDataJson()  Chargement data.json             ║
+║       ├── parseExcelRow()         Parser import Excel (SheetJS)              ║
+║       ├── renderAll()             Re-render complet                          ║
+║       ├── renderKPIs()            Grille indicateurs                         ║
+║       ├── renderTable()           Tableau campagnes                          ║
+║       ├── renderDetailPanel()     Panneau détail                             ║
+║       ├── renderExecPanel()       Executive panel (Chart.js)                 ║
+║       ├── importExcel()           Import fichier .xlsx                       ║
+║       ├── syncFromOneDrive()      Sync OneDrive via Graph API               ║
+║       └── checkLogin()            Auth par mot de passe (SHA-256)           ║
+║                                                                              ║
+║  DATA SOURCE                                                                 ║
+║  Le dashboard charge data.json au démarrage (fetch relatif).                 ║
+║  Fallback : DONNEES_INITIALES (stub vide) si data.json indisponible.        ║
+║  Hébergement : GitHub Pages (2 fichiers : ce HTML + data.json)              ║
+║                                                                              ║
+║  DESIGN TOKENS (CSS variables dans :root)                                    ║
+║  --primary: #325AFF   --accent-teal: #00C2A8   --accent-orange: #FF6B35    ║
+║  --black: #1a1a1a     --bg: #fafafa             --radius: 12px              ║
+║  Font: Inter (Google Fonts) + Arial fallback                                 ║
+║                                                                              ║
+║  POUR CLAUDE CODE — REDESIGN                                                 ║
+║  1. Les tokens CSS sont dans /* ── TOKENS : couleurs, typographie, spacing ───────────────────── */
+:root { } au début du <style>                  ║
+║  2. Chaque section du CSS est commentée /* ── NOM ── */                     ║
+║  3. Les IDs HTML sont stables et documentés ci-dessus                       ║
+║  4. Ne pas modifier : STATE, normalizeClient(), parseExcelRow(),             ║
+║     loadFromDataJson(), checkLogin() — logique métier critique              ║
+║  5. Modifier librement : tout ce qui est dans <style>, les classes HTML,    ║
+║     la structure visuelle des sections                                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -61,6 +126,7 @@ input, select, textarea {
 }
 
 /* ============ HEADER ============ */
+/* ── LAYOUT : header, main, structure ──────────────────────────── */
 .app-header {
   background: var(--white);
   border-bottom: 1px solid var(--gray-200);
@@ -164,6 +230,7 @@ section {
 }
 
 /* ============ KPI GRID ============ */
+/* ── KPI GRID : grille des 9 indicateurs ───────────────────────── */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -501,6 +568,7 @@ table.clients-table {
 .chart-toggle button:hover:not(.active) { color: var(--black); }
 
 /* ============ DETAIL PANEL ============ */
+/* ── DETAIL PANEL : panneau glissant ───────────────────────────── */
 .detail-panel {
   position: fixed;
   top: 0;
@@ -765,6 +833,7 @@ table.clients-table {
 }
 
 /* ============ EXECUTIVE PERFORMANCE PANEL ============ */
+/* ── EXEC PANEL : Executive Performance Panel ──────────────────── */
 .exec-panel {
   background: linear-gradient(135deg, #0c1442 0%, #1a2a6b 60%, #2a3da3 100%);
   border-radius: var(--radius-lg);
@@ -1252,6 +1321,7 @@ table.clients-table {
 }
 
 /* ============ MODAL ============ */
+/* ── MODALS ────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1418,9 +1488,132 @@ table.clients-table {
 }
 .btn-github:hover { background: #1a1e22; color: #fff; }
 
+
+/* ── LOGIN SCREEN ──────────────────────────────────────────────── */
+/* ── LOGIN SCREEN ─────────────────────────────────────────────── */
+#loginScreen {
+  position: fixed;
+  inset: 0;
+  background: #0a0f1e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#loginScreen.hidden { display: none; }
+
+.login-card {
+  background: #111827;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  padding: 48px 44px 40px;
+  width: 380px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.login-logo {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #325AFF;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+  letter-spacing: -.02em;
+}
+.login-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,.4);
+  margin-bottom: 32px;
+}
+.login-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.5);
+  margin-bottom: 8px;
+  display: block;
+}
+.login-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.06);
+  border: 1.5px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  box-sizing: border-box;
+  letter-spacing: .08em;
+}
+.login-input:focus { border-color: #325AFF; }
+.login-input.error { border-color: #ef4444; }
+.login-error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 8px;
+  min-height: 16px;
+  display: none;
+}
+.login-error.show { display: block; }
+.login-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 13px;
+  background: #325AFF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s;
+  letter-spacing: -.01em;
+}
+.login-btn:hover { background: #2347e0; }
+.login-btn:active { background: #1a35cc; }
+.login-footer {
+  margin-top: 24px;
+  font-size: 11px;
+  color: rgba(255,255,255,.2);
+  text-align: center;
+}
+
 </style>
 </head>
 <body>
+
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">AFP</div>
+    <div class="login-title">Dashboard DDD</div>
+    <div class="login-sub">Distribution et Diffusion Digitale</div>
+    <label class="login-label" for="loginPwd">Mot de passe</label>
+    <input
+      class="login-input"
+      type="password"
+      id="loginPwd"
+      placeholder="••••••••••••"
+      autocomplete="current-password"
+      onkeydown="if(event.key==='Enter') checkLogin()"
+    >
+    <div class="login-error" id="loginError">Mot de passe incorrect.</div>
+    <button class="login-btn" onclick="checkLogin()">Accéder au dashboard</button>
+    <div class="login-footer">Accès réservé à l'équipe AFP DDD</div>
+  </div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+
 
 <header class="app-header">
   <div class="header-inner">
@@ -3271,11 +3464,10 @@ async function submitAI() {
 
 // ============ INIT ============
 function init() {
+  if (!checkSession()) return;   // bloqué jusqu'au login
   bindEvents();
   populateRegionFilter();
   loadData();
-  // Note: si data.json est chargé en async, renderAll() est appelé dans le .then()
-  // Si fallback localStorage, on appelle renderAll() ici
   if (STATE.donnees && STATE.donnees.clients && STATE.donnees.clients.length > 0) {
     renderAll();
   }
@@ -3423,6 +3615,57 @@ async function syncFromOneDrive() {
     btn.disabled = false;
   }
 }
+
+
+// ══ AUTH ══════════════════════════════════════════════════════════════════
+const _PWD_HASH = "a539b84a4eda1a15a0f9e62d4bdbdd9553b0ba35b8dd1b45c7cc4b68c3751403";
+const _SESSION_KEY = "ddd_auth_ok";
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+async function checkLogin() {
+  const input = document.getElementById("loginPwd");
+  const errEl = document.getElementById("loginError");
+  const val   = input.value;
+  if (!val) return;
+
+  const hash = await sha256(val);
+  if (hash === _PWD_HASH) {
+    sessionStorage.setItem(_SESSION_KEY, "1");
+    document.getElementById("loginScreen").classList.add("hidden");
+    input.value = "";
+    errEl.classList.remove("show");
+    input.classList.remove("error");
+    // Lancer l'app si pas encore initialisée
+    if (!STATE.donnees || !STATE.donnees.clients.length) {
+      init();
+    }
+  } else {
+    input.classList.add("error");
+    errEl.classList.add("show");
+    input.value = "";
+    input.focus();
+    // Shake animation
+    input.style.transition = "transform .08s";
+    input.style.transform  = "translateX(-6px)";
+    setTimeout(() => input.style.transform = "translateX(6px)", 80);
+    setTimeout(() => input.style.transform = "translateX(0)", 160);
+  }
+}
+
+function checkSession() {
+  if (sessionStorage.getItem(_SESSION_KEY) === "1") {
+    document.getElementById("loginScreen").classList.add("hidden");
+    return true;
+  }
+  // Bloquer l'init jusqu'à login réussi
+  document.getElementById("loginPwd").focus();
+  return false;
+}
+// ══════════════════════════════════════════════════════════════════════════
 
 </script>
 
