@@ -3466,11 +3466,7 @@ async function submitAI() {
 function init() {
   if (!checkSession()) return;   // bloqué jusqu'au login
   bindEvents();
-  populateRegionFilter();
-  loadData();
-  if (STATE.donnees && STATE.donnees.clients && STATE.donnees.clients.length > 0) {
-    renderAll();
-  }
+  loadData();  // async — populateRegionFilter() et renderAll() sont appelés dans le .then()
 }
 
 document.addEventListener("DOMContentLoaded", init);
