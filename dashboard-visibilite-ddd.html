@@ -2255,29 +2255,65 @@ function loadData() {
 }
 
 function loadFromDataJson() {
-  // Résoudre l'URL de data.json relative au HTML
   const base = window.location.href.replace(/\/[^\/]*$/, "/");
-  const dataUrl = base + "data.json";
+  // Charger data.enc.json (chiffré AES-256-GCM)
+  const dataUrl = base + "data.enc.json";
 
-  fetch(dataUrl + "?t=" + Date.now())   // cache-bust
+  fetch(dataUrl + "?t=" + Date.now())
     .then(r => {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     })
+    .then(envelope => decryptData(envelope))
     .then(data => {
       STATE.donnees = data;
       normalizeAllClients();
       populateRegionFilter();
       renderAll();
       showDataSourceBadge("github");
-      console.log("[AFP DDD] data.json loaded:", data.clients.length, "clients");
+      console.log("[AFP DDD] data.enc.json déchiffré:", data.clients.length, "clients");
     })
     .catch(err => {
-      console.warn("[AFP DDD] data.json non disponible, utilisation du fallback inline.", err);
+      console.warn("[AFP DDD] Chargement échoué:", err);
       STATE.donnees = JSON.parse(JSON.stringify(DONNEES_INITIALES));
       normalizeAllClients();
       showDataSourceBadge("fallback");
     });
+}
+
+// Déchiffre le contenu AES-256-GCM avec le mot de passe du dashboard
+async function decryptData(envelope) {
+  if (!envelope || envelope.v !== 1) throw new Error("Format invalide");
+
+  // Récupérer le mot de passe depuis la session (saisi au login)
+  const pwd = sessionStorage.getItem("ddd_pwd");
+  if (!pwd) throw new Error("Session expirée — reconnecte-toi");
+
+  // Décoder le blob base64
+  const raw = Uint8Array.from(atob(envelope.data), c => c.charCodeAt(0));
+  const salt       = raw.slice(0, 16);
+  const iv         = raw.slice(16, 28);
+  const ciphertext = raw.slice(28);
+
+  // Dériver la clé via PBKDF2
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(pwd),
+    "PBKDF2", false, ["deriveKey"]
+  );
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false, ["decrypt"]
+  );
+
+  // Déchiffrer
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key, ciphertext
+  );
+
+  return JSON.parse(new TextDecoder().decode(decrypted));
 }
 
 function showDataSourceBadge(source) {
@@ -3631,6 +3667,7 @@ async function checkLogin() {
   const hash = await sha256(val);
   if (hash === _PWD_HASH) {
     sessionStorage.setItem(_SESSION_KEY, "1");
+    sessionStorage.setItem("ddd_pwd", val);  // nécessaire pour déchiffrer data.enc.json
     document.getElementById("loginScreen").classList.add("hidden");
     input.value = "";
     errEl.classList.remove("show");
