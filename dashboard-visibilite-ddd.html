@@ -76,48 +76,89 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root {
-  --primary: #325AFF;
-  --primary-dark: #1f3fcc;
-  --primary-soft: #e8edff;
-  --black: #1a1a1a;
-  --bg: #fafafa;
-  --white: #ffffff;
-  --accent-teal: #00C2A8;
-  --accent-orange: #FF6B35;
-  --gray-50: #f7f7f8;
-  --gray-100: #f0f0f2;
-  --gray-200: #e4e4e7;
-  --gray-300: #d1d1d6;
-  --gray-400: #a1a1aa;
-  --gray-500: #71717a;
-  --gray-600: #52525b;
-  --gray-700: #3f3f46;
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  /* Spacing */
+  /* ── Couleurs AFP ── */
+  --primary:        #325AFF;
+  --primary-dark:   #2347E0;
+  --primary-hover:  #2347E0;
+  --primary-soft:   rgba(50, 90, 255, 0.14);
+  --primary-muted:  rgba(50, 90, 255, 0.08);
+
+  /* ── Fonds dark ── */
+  --bg:             #0A0F1E;
+  --bg-base:        #0A0F1E;
+  --bg-surface:     #111827;
+  --bg-elevated:    #1A2234;
+  --bg-subtle:      #141C2E;
+
+  /* ── Rétro-compat (remappés dark) ── */
+  --white:          #111827;   /* surfaces (cartes, sidebar…) */
+  --black:          #E2E8F0;   /* texte principal clair */
+
+  /* ── Texte ── */
+  --text-primary:   #E2E8F0;
+  --text-secondary: #94A3B8;
+  --text-muted:     #64748B;
+
+  /* ── Gris dark ── */
+  --gray-50:        #0D1320;
+  --gray-100:       #111827;
+  --gray-200:       rgba(255,255,255,0.08);
+  --gray-300:       rgba(255,255,255,0.14);
+  --gray-400:       #64748B;
+  --gray-500:       #94A3B8;
+  --gray-600:       #CBD5E1;
+  --gray-700:       #E2E8F0;
+
+  /* ── Accents ── */
+  --accent-teal:    #00C2A8;
+  --accent-orange:  #FF6B35;
+  --accent-gold:    #F59E0B;
+  --accent-green:   #10B981;
+  --accent-red:     #EF4444;
+
+  /* ── Glass ── */
+  --glass-bg:       rgba(255, 255, 255, 0.04);
+  --glass-border:   rgba(255, 255, 255, 0.08);
+
+  /* ── Shadows dark ── */
+  --shadow-sm:      0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.40);
+  --shadow-md:      0 4px 16px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
+  --shadow-lg:      0 20px 60px rgba(0,0,0,0.50);
+  --shadow-glow:    0 0 40px rgba(50, 90, 255, 0.18);
+
+  /* ── Radius ── */
+  --radius-sm:      6px;
+  --radius-md:      10px;
+  --radius-lg:      16px;
+  --radius-xl:      24px;
+
+  /* ── Spacing ── */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
   --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
-  /* Transitions */
-  --t-fast: 120ms ease;
-  --t-normal: 200ms ease;
-  --t-slow: 300ms cubic-bezier(0.4,0,0.2,1);
+
+  /* ── Transitions ── */
+  --t-fast:   0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-normal: 0.20s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-slow:   0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--black);
+  background: var(--bg-base);
+  color: var(--text-primary);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   font-feature-settings: 'cv11', 'ss01';
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
 
 button {
   font-family: inherit;
@@ -151,23 +192,24 @@ input, select, textarea {
   align-items: center;
   gap: 10px;
   padding: 18px 16px 14px;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid var(--glass-border);
   flex-shrink: 0;
 }
 
 .brand-logo {
   width: 30px;
   height: 30px;
-  background: var(--black);
+  background: var(--primary);
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--white);
+  color: #fff;
   font-weight: 800;
   letter-spacing: -0.02em;
   font-size: 11px;
   flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(50,90,255,0.35);
 }
 
 .sidebar-brand-name {
@@ -236,7 +278,7 @@ input, select, textarea {
 
 .sidebar-footer {
   padding: 12px 16px;
-  border-top: 1px solid var(--gray-100);
+  border-top: 1px solid var(--glass-border);
   flex-shrink: 0;
 }
 
@@ -257,6 +299,39 @@ input, select, textarea {
 .sidebar-source-dot.local    { background: #f59e0b; }
 .sidebar-source-dot.fallback { background: #94a3b8; }
 
+/* ── Rôle badge ── */
+.sidebar-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
+.sidebar-role-badge.admin {
+  background: var(--primary-muted);
+  color: var(--primary);
+}
+.sidebar-role-badge.internal {
+  background: rgba(245,158,11,0.14);
+  color: #f59e0b;
+}
+/* ── Offer badge in detail panel ── */
+.offer-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--primary-muted);
+  color: var(--primary);
+  border: 1px solid rgba(50,90,255,0.25);
+  margin-top: 6px;
+}
 .sidebar-source-label {
   font-size: 11px;
   color: var(--gray-500);
@@ -292,8 +367,8 @@ input, select, textarea {
 
 /* ── LAYOUT : header, main, structure ──────────────────────────── */
 .app-header {
-  background: rgba(255,255,255,0.92);
-  border-bottom: 1px solid var(--gray-200);
+  background: rgba(10, 15, 30, 0.92);
+  border-bottom: 1px solid var(--glass-border);
   padding: 0 32px;
   height: 52px;
   position: sticky;
@@ -538,9 +613,10 @@ section {
 
 .filter-select, .filter-input {
   padding: 7px 10px;
-  border: 1px solid var(--gray-300);
+  border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
-  background: var(--white);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   font-size: 13px;
   min-width: 120px;
   transition: border-color 0.15s;
@@ -716,27 +792,27 @@ table.clients-table {
   white-space: nowrap;
 }
 
-.region-tag.fr     { background: #e8edff; color: #2548d4; }
-.region-tag.mena   { background: #fef3c7; color: #b45309; }
-.region-tag.asia   { background: #d1fae5; color: #065f46; }
-.region-tag.amlat  { background: #ede9fe; color: #5b21b6; }
-.region-tag.europe { background: #e0e7ff; color: #3730a3; }
-.region-tag.afr    { background: #fce7f3; color: #9d174d; }
-.region-tag.eng    { background: #e0f2fe; color: #0369a1; }
+.region-tag.fr     { background: rgba(50,90,255,0.16);  color: #93a8ff; }
+.region-tag.mena   { background: rgba(245,158,11,0.16); color: #fbbf24; }
+.region-tag.asia   { background: rgba(16,185,129,0.16); color: #34d399; }
+.region-tag.amlat  { background: rgba(139,92,246,0.16); color: #c4b5fd; }
+.region-tag.europe { background: rgba(99,102,241,0.16); color: #a5b4fc; }
+.region-tag.afr    { background: rgba(236,72,153,0.16); color: #f9a8d4; }
+.region-tag.eng    { background: rgba(14,165,233,0.16); color: #7dd3fc; }
 
 .num-cell { font-family: 'JetBrains Mono', monospace; text-align: right; }
 .nd-cell  { color: var(--gray-300); font-size: 11px; }
 
 /* ── Tonalité ── */
 .tonality-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
-.tonality-positive { background: #d1fae5; color: #065f46; }
-.tonality-neutral  { background: var(--gray-100); color: var(--gray-600); }
-.tonality-negative { background: #fee2e2; color: #991b1b; }
+.tonality-positive { background: rgba(16,185,129,0.15); color: #34d399; }
+.tonality-neutral  { background: var(--glass-bg); color: var(--gray-500); }
+.tonality-negative { background: rgba(239,68,68,0.15); color: #f87171; }
 
-/* ── Table améliorée ── */
+/* ── Table améliorée dark ── */
 .clients-table tbody tr { transition: background 0.12s; cursor: pointer; }
-.clients-table tbody tr:hover { background: #f5f7ff; }
-.clients-table tbody tr.selected { background: #eef1ff; box-shadow: inset 3px 0 0 var(--primary); }
+.clients-table tbody tr:hover { background: rgba(50,90,255,0.06); }
+.clients-table tbody tr.selected { background: rgba(50,90,255,0.12); box-shadow: inset 3px 0 0 var(--primary); }
 .client-name-cell { font-weight: 600; }
 .client-title { font-size: 11px; color: var(--gray-500); font-weight: 400; margin-top: 2px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -758,9 +834,9 @@ table.clients-table {
   bottom: 0;
   width: 540px;
   max-width: 100vw;
-  background: var(--white);
-  border-left: 1px solid var(--gray-200);
-  box-shadow: -4px 0 24px rgba(0,0,0,0.08);
+  background: var(--bg-surface);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.50);
   z-index: 100;
   overflow-y: auto;
   transform: translateX(100%);
@@ -1368,25 +1444,27 @@ table.clients-table {
 }
 
 .btn-primary {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-surface);
 }
 
 .btn-primary:hover {
   background: var(--primary);
   border-color: var(--primary);
+  color: #fff;
 }
 
 .btn-accent {
   background: var(--primary);
   border-color: var(--primary);
-  color: var(--white);
+  color: #fff;
 }
 
 .btn-accent:hover {
   background: var(--primary-dark);
   border-color: var(--primary-dark);
+  color: #fff;
 }
 
 /* ============ AI QUERY ============ */
@@ -1615,9 +1693,11 @@ table.clients-table {
 
 .form-field input, .form-field select, .form-field textarea {
   padding: 8px 10px;
-  border: 1px solid var(--gray-300);
+  border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
   font-size: 13px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
@@ -1632,11 +1712,13 @@ table.clients-table {
   bottom: 24px;
   right: 24px;
   padding: 12px 18px;
-  background: var(--black);
-  color: var(--white);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: 13px;
   z-index: 300;
+  box-shadow: var(--shadow-md);
   transform: translateY(100px);
   opacity: 0;
   transition: all 0.25s;
@@ -1874,6 +1956,7 @@ table.clients-table {
       <div class="sidebar-source-dot" id="sidebarSourceDot"></div>
       <span class="sidebar-source-label" id="sidebarSourceLabel">Chargement…</span>
     </div>
+    <span class="sidebar-role-badge admin" id="sidebarRoleBadge">Accès complet</span>
   </div>
 </nav>
 <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -2145,6 +2228,7 @@ table.clients-table {
     <button class="detail-close" id="detailClose" aria-label="Fermer">×</button>
     <div class="detail-title" id="detailTitle"></div>
     <div class="detail-subtitle" id="detailSubtitle"></div>
+    <span class="offer-badge" id="detailOfferBadge" style="display:none;"></span>
   </div>
   <div class="detail-body" id="detailBody"></div>
 </aside>
@@ -2493,14 +2577,21 @@ function loadData() {
       STATE.donnees = JSON.parse(stored);
       normalizeAllClients();
       showDataSourceBadge("localStorage");
+      populateRegionFilter();
+      renderAll();
       return;
     } catch (e) {
       console.warn("Stored data parse error, falling back to data.json");
       localStorage.removeItem("ddd_dashboard_data");
     }
   }
-  // 2. Charger data.json (source de vérité GitHub Pages)
-  loadFromDataJson();
+  // 2. Charger selon le rôle (ADMIN → data.enc.json | INTERNAL → data.internal.enc.json)
+  const role = sessionStorage.getItem("ddd_role") || "ADMIN";
+  if (role === "INTERNAL") {
+    loadFromInternalDataJson();
+  } else {
+    loadFromDataJson();
+  }
 }
 
 function loadFromDataJson() {
@@ -2585,8 +2676,68 @@ function showDataSourceBadge(source) {
 // Forcer le rechargement depuis data.json (ignore localStorage)
 function forceReloadFromJson() {
   localStorage.removeItem("ddd_dashboard_data");
-  loadFromDataJson();
+  const role = sessionStorage.getItem("ddd_role") || "ADMIN";
+  if (role === "INTERNAL") {
+    loadFromInternalDataJson();
+  } else {
+    loadFromDataJson();
+  }
   showNotif("Rechargement depuis data.json...");
+}
+
+// ── Chargement du fichier INTERNAL (vue filtrée, sans données financières) ──
+function loadFromInternalDataJson() {
+  const base    = window.location.href.replace(/\/[^\/]*$/, "/");
+  const dataUrl = base + "data.internal.enc.json";
+
+  fetch(dataUrl + "?t=" + Date.now())
+    .then(r => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(envelope => decryptData(envelope))
+    .then(data => {
+      STATE.donnees = data;
+      normalizeAllClients();
+      populateRegionFilter();
+      renderAll();
+      showDataSourceBadge("github");
+      console.log("[AFP DDD] data.internal.enc.json déchiffré :", data.clients.length, "clients");
+    })
+    .catch(err => {
+      console.warn("[AFP DDD] Chargement fichier interne échoué :", err.message);
+      // Fallback : essayer le fichier ADMIN (données complètes) en dernier recours
+      STATE.donnees = JSON.parse(JSON.stringify(DONNEES_INITIALES));
+      normalizeAllClients();
+      showDataSourceBadge("fallback");
+    });
+}
+
+// ── Applique la visibilité des éléments selon le rôle courant ─────────────
+function applyRoleVisibility() {
+  const role       = sessionStorage.getItem("ddd_role") || "ADMIN";
+  const isInternal = role === "INTERNAL";
+
+  // KPI Chiffre d'affaires — masqué pour INTERNAL
+  const kpiRevCard = document.getElementById("kpiRevenue")?.closest(".kpi-card");
+  if (kpiRevCard) kpiRevCard.style.display = isInternal ? "none" : "";
+
+  // Section Gestion des données — masqué pour INTERNAL
+  const mgmtSection = document.getElementById("management");
+  if (mgmtSection) mgmtSection.style.display = isInternal ? "none" : "";
+
+  // Sidebar nav item "Données" — masqué pour INTERNAL
+  document.querySelectorAll(".nav-item[href='#management']").forEach(el => {
+    el.style.display = isInternal ? "none" : "";
+  });
+
+  // Badge de rôle dans la sidebar footer
+  const roleBadge = document.getElementById("sidebarRoleBadge");
+  if (roleBadge) {
+    const roleConf = ROLES[role] || ROLES.ADMIN;
+    roleBadge.textContent = roleConf.label;
+    roleBadge.className   = "sidebar-role-badge " + (isInternal ? "internal" : "admin");
+  }
 }
 
 function persistData() {
@@ -2763,6 +2914,17 @@ function openDetail(id) {
   document.getElementById("detailSubtitle").textContent =
     (c.titreCampagne || "") + " · " + fmtDate(c.datePublication) + " · " + region;
 
+  // Offre associée — badge sous le sous-titre
+  const offerEl = document.getElementById("detailOfferBadge");
+  if (offerEl) {
+    if (c.offer_name) {
+      offerEl.textContent = c.offer_name;
+      offerEl.style.display = "inline-flex";
+    } else {
+      offerEl.style.display = "none";
+    }
+  }
+
   const body = document.getElementById("detailBody");
 
   // Scoring summary
@@ -2794,7 +2956,8 @@ function openDetail(id) {
     </div>
   </div>`;
 
-  // Facturation
+  // Facturation — visible uniquement pour les rôles autorisés
+  if (can("canViewFinancials")) {
   const hasPrix = c.prixCampagne != null || c.prixBoost != null;
   const fmtEur = (n) => n != null
     ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n)
@@ -2821,6 +2984,7 @@ function openDetail(id) {
     html += `<div class="empty-state" style="text-align:left;">Prix non renseignés — à compléter dans le fichier Excel source (colonnes <code>prixCampagne</code> / <code>prixBoost</code>).</div>`;
   }
   html += `</div>`;
+  } // fin can("canViewFinancials")
 
   // Timeline
   html += `<div class="detail-section">
@@ -2996,13 +3160,13 @@ function renderMonthlyChart(metric = "vues") {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#71717a", font: { family: "Inter", size: 11 } }
+          ticks: { color: "#94A3B8", font: { family: "Inter", size: 11 } }
         },
         y: {
-          grid: { color: "#f0f0f2" },
+          grid: { color: "rgba(255,255,255,0.06)" },
           border: { display: false },
           ticks: {
-            color: "#71717a",
+            color: "#94A3B8",
             font: { family: "Inter", size: 11 },
             callback: (v) => new Intl.NumberFormat("fr-FR").format(v)
           }
@@ -3070,10 +3234,10 @@ function renderCompChart(metric = "vues") {
       },
       scales: {
         x: {
-          grid: { color: "#f0f0f2" },
+          grid: { color: "rgba(255,255,255,0.06)" },
           border: { display: false },
           ticks: {
-            color: "#71717a",
+            color: "#94A3B8",
             font: { family: "Inter", size: 11 },
             callback: (v) => metric.includes("taux") ? v + " %" : new Intl.NumberFormat("fr-FR").format(v)
           }
@@ -3081,7 +3245,7 @@ function renderCompChart(metric = "vues") {
         y: {
           grid: { display: false },
           ticks: {
-            color: "#52525b",
+            color: "#94A3B8",
             font: { family: "Inter", size: 11 }
           }
         }
@@ -3268,6 +3432,7 @@ function renderAll() {
   renderMonthlyChart(STATE.monthlyMetric || "vues");
   renderCompChart(STATE.compMetric || "vues");
   renderExecutivePanel();
+  applyRoleVisibility();
 }
 
 // ============ EVENT BINDINGS ============
@@ -3708,6 +3873,7 @@ function parseExcelRow(rawRow, idx) {
     id,
     nom,
     salesperson:          pick("salesperson", "commercial", "vendeur", "charge", "responsable"),
+    offer_name:           pick("offrename", "offre", "offreassociee", "offer", "offername", "nomdeloffre", "nomoffre", "typeoffre", "nomdeloffreassociee"),
     titreCampagne:        pick("titrecampagne", "titre", "campaign", "title", "titredelacampagne", "titrecommunique", "titrecampagne"),
     regionAFP:            pick("regionafp", "region", "regionddd", "zonegeo", "zone") || "FR",
     pays:                 pick("pays", "country"),
@@ -4022,8 +4188,39 @@ async function syncFromOneDrive() {
 }
 
 
-// ══ AUTH ══════════════════════════════════════════════════════════════════
-const _PWD_HASH = "a539b84a4eda1a15a0f9e62d4bdbdd9553b0ba35b8dd1b45c7cc4b68c3751403";
+// ══ AUTH + RÔLES ══════════════════════════════════════════════════════════
+// ── Système de rôles ─────────────────────────────────────────────────────
+const ROLES = {
+  ADMIN: {
+    hash:              "a539b84a4eda1a15a0f9e62d4bdbdd9553b0ba35b8dd1b45c7cc4b68c3751403",
+    label:             "Accès complet",
+    dataFile:          "data.enc.json",
+    canViewFinancials: true,
+    canViewPricing:    true,
+    canExport:         true,
+    canImport:         true,
+    canViewAllClients: true,
+  },
+  INTERNAL: {
+    // SHA-256("AFPDASHBOARDINTERNAL")
+    hash:              "14593b9b78712074cc2e1e907e2f280c434ca9bd74aa888ecf75adced8bf823e",
+    label:             "Vue interne filtrée",
+    dataFile:          "data.internal.enc.json",
+    canViewFinancials: false,
+    canViewPricing:    false,
+    canExport:         false,
+    canImport:         false,
+    canViewAllClients: true,
+  }
+};
+
+/** Retourne true si le rôle courant a la permission demandée */
+function can(permission) {
+  const role = sessionStorage.getItem("ddd_role") || "ADMIN";
+  return ROLES[role]?.[permission] === true;
+}
+
+const _PWD_HASH    = ROLES.ADMIN.hash;  // rétro-compat
 const _SESSION_KEY = "ddd_auth_ok";
 
 async function sha256(str) {
@@ -4038,14 +4235,21 @@ async function checkLogin() {
   if (!val) return;
 
   const hash = await sha256(val);
-  if (hash === _PWD_HASH) {
+
+  // ── Détecter le rôle selon le hash ──────────────────────────────────────
+  let matchedRole = null;
+  for (const [roleName, roleConf] of Object.entries(ROLES)) {
+    if (hash === roleConf.hash) { matchedRole = roleName; break; }
+  }
+
+  if (matchedRole) {
     sessionStorage.setItem(_SESSION_KEY, "1");
-    sessionStorage.setItem("ddd_pwd", val);  // nécessaire pour déchiffrer data.enc.json
+    sessionStorage.setItem("ddd_pwd",  val);          // pour déchiffrement AES
+    sessionStorage.setItem("ddd_role", matchedRole);  // rôle courant
     document.getElementById("loginScreen").classList.add("hidden");
     input.value = "";
     errEl.classList.remove("show");
     input.classList.remove("error");
-    // Lancer l'app si pas encore initialisée
     if (!STATE.donnees || !STATE.donnees.clients.length) {
       init();
     }
@@ -4054,7 +4258,6 @@ async function checkLogin() {
     errEl.classList.add("show");
     input.value = "";
     input.focus();
-    // Shake animation
     input.style.transition = "transform .08s";
     input.style.transform  = "translateX(-6px)";
     setTimeout(() => input.style.transform = "translateX(6px)", 80);
@@ -4067,7 +4270,7 @@ function checkSession() {
     document.getElementById("loginScreen").classList.add("hidden");
     return true;
   }
-  // Bloquer l'init jusqu'à login réussi
+  // Bloquer l'init jusqu'au login réussi
   document.getElementById("loginPwd").focus();
   return false;
 }
@@ -4095,7 +4298,7 @@ function checkSession() {
         <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:6px;">URL OneDrive</label>
         <input type="text" id="oneDriveUrl"
           placeholder="https://1drv.ms/x/... ou https://afp-my.sharepoint.com/..."
-          style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;"
+          style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;background:var(--bg-elevated);color:var(--text-primary);"
           onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--gray-200)'">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
           <input type="checkbox" id="oneDriveSaveUrl" style="cursor:pointer;width:15px;height:15px;">
