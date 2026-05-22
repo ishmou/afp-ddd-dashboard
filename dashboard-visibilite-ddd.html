@@ -98,6 +98,13 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  /* Spacing */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  /* Transitions */
+  --t-fast: 120ms ease;
+  --t-normal: 200ms ease;
+  --t-slow: 300ms cubic-bezier(0.4,0,0.2,1);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -125,38 +132,32 @@ input, select, textarea {
   color: inherit;
 }
 
-/* ============ HEADER ============ */
-/* ── LAYOUT : header, main, structure ──────────────────────────── */
-.app-header {
+/* ── SIDEBAR ───────────────────────────────────────────────────── */
+.app-sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 240px;
   background: var(--white);
-  border-bottom: 1px solid var(--gray-200);
-  padding: 24px 40px;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(10px);
-  background: rgba(255,255,255,0.85);
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  overflow: hidden;
+  transition: transform var(--t-slow);
 }
 
-.header-inner {
-  max-width: 1480px;
-  margin: 0 auto;
+.sidebar-brand {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+  gap: 10px;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  flex-shrink: 0;
 }
 
 .brand-logo {
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   background: var(--black);
   border-radius: var(--radius-sm);
   display: flex;
@@ -165,33 +166,171 @@ input, select, textarea {
   color: var(--white);
   font-weight: 800;
   letter-spacing: -0.02em;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-name {
   font-size: 13px;
-}
-
-.brand-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.01em;
+  color: var(--black);
+  line-height: 1.2;
 }
 
-.brand-subtitle {
-  font-size: 12px;
-  color: var(--gray-500);
+.sidebar-brand-sub {
+  font-size: 10px;
+  color: var(--gray-400);
   margin-top: 2px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  padding: 10px 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.sidebar-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gray-400);
+  padding: 10px 10px 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-600);
+  text-decoration: none;
+  transition: background var(--t-fast), color var(--t-fast);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.nav-item:hover {
+  background: var(--gray-50);
+  color: var(--black);
+}
+
+.nav-item.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.nav-item svg { flex-shrink: 0; opacity: 0.6; }
+.nav-item.active svg { opacity: 1; }
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-100);
+  flex-shrink: 0;
+}
+
+.sidebar-source {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.sidebar-source-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  flex-shrink: 0;
+  transition: background var(--t-fast);
+}
+.sidebar-source-dot.github   { background: #22c55e; }
+.sidebar-source-dot.local    { background: #f59e0b; }
+.sidebar-source-dot.fallback { background: #94a3b8; }
+
+.sidebar-source-label {
+  font-size: 11px;
+  color: var(--gray-500);
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 39;
+}
+
+.sidebar-backdrop.open { display: block; }
+
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  color: var(--gray-600);
+  transition: background var(--t-fast);
+  flex-shrink: 0;
+}
+
+.hamburger:hover { background: var(--gray-100); }
+
+@media (max-width: 1024px) {
+  .hamburger { display: flex; }
+}
+
+/* ── LAYOUT : header, main, structure ──────────────────────────── */
+.app-header {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0 32px;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  margin-left: 240px;
+  display: flex;
+  align-items: center;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 1;
+}
+
+.header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--black);
+  letter-spacing: -0.01em;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .gen-info {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--gray-500);
   font-family: 'JetBrains Mono', monospace;
-  padding: 6px 10px;
+  padding: 5px 9px;
   background: var(--gray-50);
   border-radius: var(--radius-sm);
   border: 1px solid var(--gray-200);
@@ -199,9 +338,8 @@ input, select, textarea {
 
 /* ============ LAYOUT ============ */
 main {
-  max-width: 1480px;
-  margin: 0 auto;
-  padding: 32px 40px 80px;
+  margin-left: 240px;
+  padding: 28px 32px 80px;
 }
 
 section {
@@ -233,15 +371,8 @@ section {
 /* ── KPI GRID : grille des 9 indicateurs ───────────────────────── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
-}
-
-.kpi-grid-secondary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-top: 14px;
 }
 
 .kpi-card {
@@ -439,9 +570,60 @@ section {
 }
 
 .results-count {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--gray-500);
   font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── INLINE FILTER TOOLBAR ────────────────────────────────────── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 14px;
+  flex-wrap: wrap;
+}
+
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-200);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: var(--white);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  border-color: var(--gray-300);
+  background: var(--gray-50);
+  color: var(--black);
+}
+
+.filter-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 /* ============ TABLE ============ */
@@ -773,6 +955,45 @@ table.clients-table {
   font-size: 13px;
   text-align: center;
   font-style: italic;
+}
+
+/* ── BILLING ───────────────────────────────────────────────────── */
+.billing-grid {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.billing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.billing-row:last-child { border-bottom: none; }
+
+.billing-label { color: var(--gray-500); font-size: 12px; }
+
+.billing-total {
+  background: var(--gray-50);
+  font-weight: 700;
+  color: var(--black);
+}
+
+.billing-total .billing-label { color: var(--gray-700); font-weight: 600; font-size: 13px; }
+
+.billing-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--black);
+}
+
+.billing-total .billing-amount {
+  font-size: 15px;
+  color: var(--primary);
 }
 
 /* ============ COMPARATIVE ============ */
@@ -1430,13 +1651,16 @@ table.clients-table {
   font-size: 12px;
   border-top: 1px solid var(--gray-200);
   background: var(--white);
+  margin-left: 240px;
 }
 
 /* ============ PRINT ============ */
 @media print {
-  .app-header { position: relative; box-shadow: none; border-bottom: 2px solid var(--black); }
-  .filter-bar, .mgmt-actions, .ai-card, .detail-panel, .modal-overlay, .notif { display: none !important; }
-  main { padding: 0; max-width: none; }
+  .app-sidebar { display: none !important; }
+  .app-header { position: relative; box-shadow: none; border-bottom: 2px solid var(--black); margin-left: 0; }
+  main { padding: 0; margin-left: 0; }
+  .app-footer { margin-left: 0; }
+  .filter-bar, .table-toolbar, .mgmt-actions, .ai-card, .detail-panel, .modal-overlay, .notif { display: none !important; }
   section { page-break-inside: avoid; margin-bottom: 24px; }
   .chart-card, .kpi-card, .table-card, .exec-panel { box-shadow: none; border-color: var(--gray-300); }
   .exec-panel { background: var(--white) !important; color: var(--black) !important; }
@@ -1445,28 +1669,25 @@ table.clients-table {
 }
 
 /* ============ RESPONSIVE ============ */
-@media (max-width: 1280px) {
-  .kpi-grid { grid-template-columns: repeat(4, 1fr); }
-}
-
 @media (max-width: 1024px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .kpi-grid-secondary { grid-template-columns: repeat(3, 1fr); }
-  main { padding: 24px 20px 60px; }
-  .app-header { padding: 16px 20px; }
+  .app-sidebar { transform: translateX(-100%); }
+  .app-sidebar.mobile-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.12); }
+  .app-header { margin-left: 0; padding: 0 20px; }
+  main { margin-left: 0; padding: 20px 16px 60px; }
   .detail-panel { width: 100vw; }
+  .app-footer { margin-left: 0; }
 }
 
 @media (max-width: 720px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .kpi-grid-secondary { grid-template-columns: 1fr; }
-  .kpi-value { font-size: 24px; }
-  .filter-bar { padding: 12px; }
+  .kpi-value { font-size: 22px; }
   .clients-table thead th, .clients-table tbody td { padding: 10px 12px; font-size: 12px; }
+  .toolbar-right { flex-wrap: wrap; }
 }
 
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }
+  .table-toolbar { flex-direction: column; align-items: flex-start; }
 }
 
 .btn-onedrive {
@@ -1615,19 +1836,61 @@ table.clients-table {
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 
 
+<!-- ══ SIDEBAR ═════════════════════════════════════════════════════════ -->
+<nav class="app-sidebar" id="appSidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">AFP</div>
+    <div>
+      <div class="sidebar-brand-name">Dashboard DDD</div>
+      <div class="sidebar-brand-sub">Distribution &amp; Diffusion Digitale</div>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <span class="sidebar-label">Navigation</span>
+    <a class="nav-item active" href="#overview" data-section="overview">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/></svg>
+      Vue d'ensemble
+    </a>
+    <a class="nav-item" href="#comparative" data-section="comparative">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 12l3-4 3 2.5 3-5 3 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 14h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Performance
+    </a>
+    <a class="nav-item" href="#clientsSection" data-section="clientsSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/><rect x="2" y="7.1" width="12" height="1.8" rx="0.9" fill="currentColor"/><rect x="2" y="11.2" width="7" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/></svg>
+      Campagnes
+    </a>
+    <span class="sidebar-label" style="margin-top:8px;">Outils</span>
+    <a class="nav-item" href="#management" data-section="management">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.4"/></svg>
+      Données
+    </a>
+    <a class="nav-item" href="#aiSection" data-section="aiSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.3 3.2L13 6l-2.8 2.7L11 12.5 8 10.8l-3 1.7.8-3.8L3 6l3.7-.8L8 1.5z" fill="currentColor" opacity=".75"/></svg>
+      Requêtes IA
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-source">
+      <div class="sidebar-source-dot" id="sidebarSourceDot"></div>
+      <span class="sidebar-source-label" id="sidebarSourceLabel">Chargement…</span>
+    </div>
+  </div>
+</nav>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
 <header class="app-header">
   <div class="header-inner">
-    <div class="brand">
-      <div class="brand-logo">AFP</div>
-      <div>
-        <div class="brand-title">Dashboard de visibilité clients</div>
-        <div class="brand-subtitle">Équipe DDD, Distribution et Diffusion Digitale</div>
-      </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <span class="header-title" id="headerTitle">Vue d'ensemble</span>
     </div>
     <div class="header-actions">
-      <div class="gen-info" id="genInfo">Généré le 13/05/2026</div>
-      <span id="dataSourceBadge" style="font-size:11px;font-weight:600;letter-spacing:.02em;padding:3px 8px;border-radius:4px;background:rgba(255,255,255,.12);color:#fff;"></span>
-      <button class="btn" id="printBtn">Imprimer en PDF</button>
+      <div class="gen-info" id="genInfo">—</div>
+      <button class="btn" id="printBtn" style="font-size:12px;padding:5px 12px;">Imprimer PDF</button>
     </div>
   </div>
 </header>
@@ -1684,6 +1947,11 @@ table.clients-table {
         <div class="kpi-value" id="kpiAvgClic">0<span class="unit">%</span></div>
         <div class="kpi-trend" id="kpiAvgClicTrend">moyenne sur campagnes renseignées</div>
       </div>
+      <div class="kpi-card" style="--accent:#6366f1;">
+        <div class="kpi-label"><span class="kpi-label-dot" style="background:#6366f1;"></span>Chiffre d'affaires</div>
+        <div class="kpi-value" id="kpiRevenue"><span class="unit" style="font-size:16px;">n/d</span></div>
+        <div class="kpi-trend" id="kpiRevenueTrend">données non renseignées dans l'Excel</div>
+      </div>
     </div>
 
     <div class="chart-card">
@@ -1701,57 +1969,38 @@ table.clients-table {
     </div>
   </section>
 
-  <!-- FILTRES -->
-  <section id="filters">
-    <div class="section-header">
-      <div>
-        <div class="section-title">Filtres globaux</div>
-        <div class="section-desc">Restreindre l'analyse aux campagnes pertinentes</div>
-      </div>
-      <div class="results-count" id="resultsCount"></div>
-    </div>
-    <div class="filter-bar">
-      <div class="filter-group">
-        <span class="filter-label">Période</span>
-        <select class="filter-select" id="filterPeriod">
-          <option value="all">Tout l'historique</option>
-          <option value="1m">30 derniers jours</option>
-          <option value="3m">3 derniers mois</option>
-          <option value="6m">6 derniers mois</option>
-          <option value="2026">Année 2026</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">Région DDD</span>
-        <select class="filter-select" id="filterRegion">
-          <option value="all">Toutes</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">Type de contenu</span>
-        <select class="filter-select" id="filterContent">
-          <option value="all">Tous</option>
-          <option value="Texte">Texte</option>
-          <option value="Photo">Photo</option>
-          <option value="Vidéo">Vidéo</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <span class="filter-label">Client</span>
-        <input class="filter-input" id="filterClient" placeholder="Rechercher..." type="search">
-      </div>
-      <button class="filter-reset" id="filterReset">Réinitialiser</button>
-    </div>
-  </section>
-
   <!-- TABLEAU -->
   <section id="clientsSection">
     <div class="section-header">
       <div>
-        <div class="section-title">Vue par client</div>
+        <div class="section-title">Campagnes</div>
         <div class="section-desc">Cliquez une ligne pour ouvrir le panneau détaillé</div>
       </div>
+      <div class="results-count" id="resultsCount"></div>
     </div>
+    <div class="table-toolbar">
+      <div class="filter-chips" id="regionChips">
+        <button class="filter-chip active" data-region="all">Toutes</button>
+      </div>
+      <div class="toolbar-right">
+        <input class="filter-input" id="filterClient" placeholder="Rechercher…" type="search" style="width:150px;">
+        <select class="filter-select" id="filterPeriod">
+          <option value="all">Tout l'historique</option>
+          <option value="1m">30 derniers jours</option>
+          <option value="3m">3 mois</option>
+          <option value="6m">6 mois</option>
+          <option value="2026">2026</option>
+        </select>
+        <select class="filter-select" id="filterContent">
+          <option value="all">Tous types</option>
+          <option value="Texte">Texte</option>
+          <option value="Photo">Photo</option>
+          <option value="Vidéo">Vidéo</option>
+        </select>
+        <button class="filter-reset" id="filterReset" title="Réinitialiser les filtres" style="padding:7px 10px;">↺</button>
+      </div>
+    </div>
+    <select id="filterRegion" style="display:none;"></select>
     <div class="table-card">
       <table class="clients-table" id="clientsTable">
         <thead>
@@ -2317,16 +2566,20 @@ async function decryptData(envelope) {
 }
 
 function showDataSourceBadge(source) {
-  let el = document.getElementById("dataSourceBadge");
-  if (!el) return;
   const labels = {
-    github:    { text: "Données GitHub", color: "#22c55e" },
-    localStorage: { text: "Données locales", color: "#f59e0b" },
-    fallback:  { text: "Données intégrées", color: "#94a3b8" },
+    github:       { text: "Données GitHub",    color: "#22c55e" },
+    localStorage: { text: "Données locales",   color: "#f59e0b" },
+    fallback:     { text: "Données intégrées", color: "#94a3b8" },
   };
   const l = labels[source] || labels.fallback;
-  el.textContent = l.text;
-  el.style.color = l.color;
+  // Header badge (kept for compat)
+  const el = document.getElementById("dataSourceBadge");
+  if (el) { el.textContent = l.text; el.style.color = l.color; }
+  // Sidebar source indicator
+  const dot   = document.getElementById("sidebarSourceDot");
+  const label = document.getElementById("sidebarSourceLabel");
+  if (dot)   { dot.className = "sidebar-source-dot " + source; }
+  if (label) { label.textContent = l.text; }
 }
 
 // Forcer le rechargement depuis data.json (ignore localStorage)
@@ -2413,6 +2666,23 @@ function renderKPIs() {
     openArr.length + " campagne" + (openArr.length > 1 ? "s" : "") + " renseignée" + (openArr.length > 1 ? "s" : "");
   document.getElementById("kpiAvgClicTrend").textContent =
     clicArr.length + " campagne" + (clicArr.length > 1 ? "s" : "") + " renseignée" + (clicArr.length > 1 ? "s" : "");
+
+  // Revenue KPI (prixCampagne + prixBoost si renseignés)
+  const hasRevenue = arr.some(c => c.prixCampagne != null || c.prixBoost != null);
+  const revenue = arr.reduce((s, c) => s + (c.prixCampagne || 0) + (c.prixBoost || 0), 0);
+  const kpiRevEl = document.getElementById("kpiRevenue");
+  if (kpiRevEl) {
+    kpiRevEl.innerHTML = hasRevenue
+      ? new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(revenue) + '<span class="unit">€</span>'
+      : '<span class="unit" style="font-size:16px;">n/d</span>';
+  }
+  const kpiRevTrend = document.getElementById("kpiRevenueTrend");
+  if (kpiRevTrend) {
+    const valorised = arr.filter(c => c.prixCampagne != null || c.prixBoost != null).length;
+    kpiRevTrend.textContent = hasRevenue
+      ? valorised + " campagne" + (valorised > 1 ? "s" : "") + " valorisée" + (valorised > 1 ? "s" : "")
+      : "données non renseignées dans l'Excel";
+  }
 
   document.getElementById("resultsCount").textContent =
     arr.length + " campagne" + (arr.length > 1 ? "s" : "") + " affichée" + (arr.length > 1 ? "s" : "");
@@ -2523,6 +2793,34 @@ function openDetail(id) {
       <div class="detail-kpi"><div class="detail-kpi-label">Région AFP</div><div class="detail-kpi-value" style="font-size:18px;"><span class="region-tag ${region.toLowerCase()}">${region}</span></div></div>
     </div>
   </div>`;
+
+  // Facturation
+  const hasPrix = c.prixCampagne != null || c.prixBoost != null;
+  const fmtEur = (n) => n != null
+    ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n)
+    : "—";
+  html += `<div class="detail-section">
+    <h4>Facturation</h4>`;
+  if (hasPrix) {
+    const total = (c.prixCampagne || 0) + (c.prixBoost || 0);
+    html += `<div class="billing-grid">
+      <div class="billing-row">
+        <span class="billing-label">Campagne</span>
+        <span class="billing-amount">${fmtEur(c.prixCampagne)}</span>
+      </div>
+      ${c.boost ? `<div class="billing-row">
+        <span class="billing-label">Option BOOST</span>
+        <span class="billing-amount">${fmtEur(c.prixBoost)}</span>
+      </div>` : ""}
+      <div class="billing-row billing-total">
+        <span class="billing-label">Total</span>
+        <span class="billing-amount">${fmtEur(total)}</span>
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="empty-state" style="text-align:left;">Prix non renseignés — à compléter dans le fichier Excel source (colonnes <code>prixCampagne</code> / <code>prixBoost</code>).</div>`;
+  }
+  html += `</div>`;
 
   // Timeline
   html += `<div class="detail-section">
@@ -2927,13 +3225,38 @@ function escapeHtml(s) {
 function populateRegionFilter() {
   const set = new Set(DONNEES_INITIALES.clients.map(c => c.regionAFP || c.regionDDD));
   STATE.donnees.clients.forEach(c => set.add(c.regionAFP || c.regionDDD));
+  const regions = [...set].filter(Boolean).sort();
+
+  // Hidden select (compatibilité JS existant)
   const sel = document.getElementById("filterRegion");
-  sel.innerHTML = '<option value="all">Toutes</option>';
-  [...set].sort().forEach(r => {
-    const o = document.createElement("option");
-    o.value = r;
-    o.textContent = r;
-    sel.appendChild(o);
+  if (sel) {
+    sel.innerHTML = '<option value="all">Toutes</option>';
+    regions.forEach(r => {
+      const o = document.createElement("option");
+      o.value = r; o.textContent = r;
+      sel.appendChild(o);
+    });
+  }
+
+  // Chips de région
+  const chipsEl = document.getElementById("regionChips");
+  if (!chipsEl) return;
+  chipsEl.innerHTML = '<button class="filter-chip active" data-region="all">Toutes</button>';
+  regions.forEach(r => {
+    const btn = document.createElement("button");
+    btn.className = "filter-chip";
+    btn.dataset.region = r;
+    btn.textContent = r;
+    chipsEl.appendChild(btn);
+  });
+  chipsEl.querySelectorAll(".filter-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      chipsEl.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      STATE.filters.region = chip.dataset.region;
+      if (sel) sel.value = chip.dataset.region;
+      renderAll();
+    });
   });
 }
 
@@ -2964,9 +3287,13 @@ function bindEvents() {
   document.getElementById("filterReset").addEventListener("click", () => {
     STATE.filters = { period: "all", region: "all", content: "all", client: "" };
     document.getElementById("filterPeriod").value = "all";
-    document.getElementById("filterRegion").value = "all";
+    const filterRegionEl = document.getElementById("filterRegion");
+    if (filterRegionEl) filterRegionEl.value = "all";
     document.getElementById("filterContent").value = "all";
     document.getElementById("filterClient").value = "";
+    document.querySelectorAll("#regionChips .filter-chip").forEach(c =>
+      c.classList.toggle("active", c.dataset.region === "all")
+    );
     renderAll();
   });
 
@@ -3068,7 +3395,53 @@ function bindEvents() {
   // Header gen date
   const today = new Date();
   document.getElementById("genInfo").textContent =
-    "Généré le " + today.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    today.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+
+  // Hamburger menu (mobile)
+  const sidebar = document.getElementById("appSidebar");
+  const backdrop = document.getElementById("sidebarBackdrop");
+  const hamburger = document.getElementById("hamburgerBtn");
+  function closeSidebar() {
+    sidebar.classList.remove("mobile-open");
+    backdrop.classList.remove("open");
+  }
+  if (hamburger) {
+    hamburger.addEventListener("click", () => {
+      sidebar.classList.toggle("mobile-open");
+      backdrop.classList.toggle("open");
+    });
+  }
+  if (backdrop) backdrop.addEventListener("click", closeSidebar);
+  document.querySelectorAll(".nav-item[data-section]").forEach(item => {
+    item.addEventListener("click", () => {
+      if (window.innerWidth <= 1024) closeSidebar();
+    });
+  });
+
+  // Sidebar nav — active state on scroll
+  const sectionIds = ["overview", "comparative", "clientsSection", "management", "aiSection"];
+  const sectionTitles = {
+    overview: "Vue d'ensemble",
+    comparative: "Performance",
+    clientsSection: "Campagnes",
+    management: "Données",
+    aiSection: "Requêtes IA"
+  };
+  const navItems = document.querySelectorAll(".nav-item[data-section]");
+  const headerTitle = document.getElementById("headerTitle");
+
+  function updateActiveNav() {
+    let current = sectionIds[0];
+    sectionIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.getBoundingClientRect().top <= 80) current = id;
+    });
+    navItems.forEach(item => item.classList.toggle("active", item.dataset.section === current));
+    if (headerTitle) headerTitle.textContent = sectionTitles[current] || "";
+  }
+
+  window.addEventListener("scroll", updateActiveNav, { passive: true });
+  updateActiveNav();
 }
 
 function updateKeyStatus() {
