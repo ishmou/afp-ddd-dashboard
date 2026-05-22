@@ -1,0 +1,4114 @@
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  AFP DDD — Dashboard Visibilité Clients                                      ║
+║  Version: 2.0 — Mai 2026                                                     ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  ARCHITECTURE (single-file HTML)                                             ║
+║                                                                              ║
+║  ├── <style>        CSS complet (variables, composants, layout)              ║
+║  │    ├── /* ── TOKENS ── */      Variables CSS (couleurs, typo, spacing)   ║
+║  │    ├── /* ── LAYOUT ── */      Structure générale, header, main          ║
+║  │    ├── /* ── KPI GRID ── */    Grille des 9 indicateurs                  ║
+║  │    ├── /* ── TABLE ── */       Tableau des campagnes                      ║
+║  │    ├── /* ── DETAIL ── */      Panneau de détail client                   ║
+║  │    ├── /* ── EXEC ── */        Executive Performance Panel               ║
+║  │    ├── /* ── MODALS ── */      Modals (ajout, OneDrive, etc.)            ║
+║  │    └── /* ── LOGIN ── */       Écran de login                            ║
+║  │                                                                           ║
+║  ├── <body>                                                                  ║
+║  │    ├── #loginScreen            Écran de login (z-index 9999)             ║
+║  │    ├── .app-header             Header AFP avec badge source               ║
+║  │    ├── #overview               Vue d'ensemble + KPI grid                  ║
+║  │    ├── #execSection            Executive Performance Panel               ║
+║  │    ├── #clientsSection         Tableau des campagnes + filtres            ║
+║  │    ├── #detailPanel            Panneau de détail (slide-in)              ║
+║  │    ├── #mgmtSection            Import/Export données                      ║
+║  │    ├── #aiSection              Requêtes IA (Anthropic API)               ║
+║  │    └── Modals overlay          (addModal, oneDriveModal, etc.)           ║
+║  │                                                                           ║
+║  └── <script>                                                                ║
+║       ├── DONNEES_INITIALES       Fallback données (stub vide)              ║
+║       ├── BOOST_CONFIG            Clients avec option BOOST                  ║
+║       ├── STATE                   État global de l'application               ║
+║       ├── normalizeClient()       Calcul scores et totalPickups             ║
+║       ├── loadData() / loadFromDataJson()  Chargement data.json             ║
+║       ├── parseExcelRow()         Parser import Excel (SheetJS)              ║
+║       ├── renderAll()             Re-render complet                          ║
+║       ├── renderKPIs()            Grille indicateurs                         ║
+║       ├── renderTable()           Tableau campagnes                          ║
+║       ├── renderDetailPanel()     Panneau détail                             ║
+║       ├── renderExecPanel()       Executive panel (Chart.js)                 ║
+║       ├── importExcel()           Import fichier .xlsx                       ║
+║       ├── syncFromOneDrive()      Sync OneDrive via Graph API               ║
+║       └── checkLogin()            Auth par mot de passe (SHA-256)           ║
+║                                                                              ║
+║  DATA SOURCE                                                                 ║
+║  Le dashboard charge data.json au démarrage (fetch relatif).                 ║
+║  Fallback : DONNEES_INITIALES (stub vide) si data.json indisponible.        ║
+║  Hébergement : GitHub Pages (2 fichiers : ce HTML + data.json)              ║
+║                                                                              ║
+║  DESIGN TOKENS (CSS variables dans :root)                                    ║
+║  --primary: #325AFF   --accent-teal: #00C2A8   --accent-orange: #FF6B35    ║
+║  --black: #1a1a1a     --bg: #fafafa             --radius: 12px              ║
+║  Font: Inter (Google Fonts) + Arial fallback                                 ║
+║                                                                              ║
+║  POUR CLAUDE CODE — REDESIGN                                                 ║
+║  1. Les tokens CSS sont dans /* ── TOKENS : couleurs, typographie, spacing ───────────────────── */
+:root { } au début du <style>                  ║
+║  2. Chaque section du CSS est commentée /* ── NOM ── */                     ║
+║  3. Les IDs HTML sont stables et documentés ci-dessus                       ║
+║  4. Ne pas modifier : STATE, normalizeClient(), parseExcelRow(),             ║
+║     loadFromDataJson(), checkLogin() — logique métier critique              ║
+║  5. Modifier librement : tout ce qui est dans <style>, les classes HTML,    ║
+║     la structure visuelle des sections                                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de visibilité clients, équipe DDD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --primary: #325AFF;
+  --primary-dark: #1f3fcc;
+  --primary-soft: #e8edff;
+  --black: #1a1a1a;
+  --bg: #fafafa;
+  --white: #ffffff;
+  --accent-teal: #00C2A8;
+  --accent-orange: #FF6B35;
+  --gray-50: #f7f7f8;
+  --gray-100: #f0f0f2;
+  --gray-200: #e4e4e7;
+  --gray-300: #d1d1d6;
+  --gray-400: #a1a1aa;
+  --gray-500: #71717a;
+  --gray-600: #52525b;
+  --gray-700: #3f3f46;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  /* Spacing */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  /* Transitions */
+  --t-fast: 120ms ease;
+  --t-normal: 200ms ease;
+  --t-slow: 300ms cubic-bezier(0.4,0,0.2,1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--black);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ── SIDEBAR ───────────────────────────────────────────────────── */
+.app-sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 240px;
+  background: var(--white);
+  border-right: 1px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  overflow: hidden;
+  transition: transform var(--t-slow);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  flex-shrink: 0;
+}
+
+.brand-logo {
+  width: 30px;
+  height: 30px;
+  background: var(--black);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--black);
+  line-height: 1.2;
+}
+
+.sidebar-brand-sub {
+  font-size: 10px;
+  color: var(--gray-400);
+  margin-top: 2px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.sidebar-nav {
+  padding: 10px 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.sidebar-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gray-400);
+  padding: 10px 10px 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-600);
+  text-decoration: none;
+  transition: background var(--t-fast), color var(--t-fast);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.nav-item:hover {
+  background: var(--gray-50);
+  color: var(--black);
+}
+
+.nav-item.active {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.nav-item svg { flex-shrink: 0; opacity: 0.6; }
+.nav-item.active svg { opacity: 1; }
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-100);
+  flex-shrink: 0;
+}
+
+.sidebar-source {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.sidebar-source-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  flex-shrink: 0;
+  transition: background var(--t-fast);
+}
+.sidebar-source-dot.github   { background: #22c55e; }
+.sidebar-source-dot.local    { background: #f59e0b; }
+.sidebar-source-dot.fallback { background: #94a3b8; }
+
+.sidebar-source-label {
+  font-size: 11px;
+  color: var(--gray-500);
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 39;
+}
+
+.sidebar-backdrop.open { display: block; }
+
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  color: var(--gray-600);
+  transition: background var(--t-fast);
+  flex-shrink: 0;
+}
+
+.hamburger:hover { background: var(--gray-100); }
+
+@media (max-width: 1024px) {
+  .hamburger { display: flex; }
+}
+
+/* ── LAYOUT : header, main, structure ──────────────────────────── */
+.app-header {
+  background: rgba(255,255,255,0.92);
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0 32px;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  margin-left: 240px;
+  display: flex;
+  align-items: center;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex: 1;
+}
+
+.header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--black);
+  letter-spacing: -0.01em;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gen-info {
+  font-size: 11px;
+  color: var(--gray-500);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 5px 9px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+}
+
+/* ============ LAYOUT ============ */
+main {
+  margin-left: 240px;
+  padding: 28px 32px 80px;
+}
+
+section {
+  margin-bottom: 48px;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gray-500);
+}
+
+.section-desc {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+/* ============ KPI GRID ============ */
+/* ── KPI GRID : grille des 9 indicateurs ───────────────────────── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.kpi-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 20px 22px;
+  position: relative;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.kpi-card:hover {
+  border-color: var(--gray-300);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpi-card:hover::before {
+  opacity: 1;
+}
+
+.kpi-card.kpi-primary { --accent: var(--primary); }
+.kpi-card.kpi-organic { --accent: var(--accent-teal); }
+.kpi-card.kpi-boost { --accent: #ff8a00; }
+.kpi-card.kpi-total { --accent: var(--primary); }
+.kpi-card.kpi-views { --accent: #8b5cf6; }
+.kpi-card.kpi-outlets { --accent: #06b6d4; }
+.kpi-card.kpi-pressroom { --accent: var(--gray-700); }
+.kpi-card.kpi-feed { --accent: var(--accent-orange); }
+
+.kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--gray-500);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kpi-label-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, var(--primary));
+}
+
+.kpi-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: var(--black);
+  font-feature-settings: 'tnum';
+}
+
+.kpi-value .unit {
+  font-size: 13px;
+  color: var(--gray-400);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.kpi-trend {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ============ CHART CONTAINER ============ */
+.chart-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  margin-top: 16px;
+}
+
+.chart-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.chart-toggle {
+  display: inline-flex;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+}
+
+.chart-toggle button {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  color: var(--gray-600);
+  transition: all 0.15s;
+}
+
+.chart-toggle button.active {
+  background: var(--white);
+  color: var(--black);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-canvas-wrap {
+  position: relative;
+  height: 320px;
+}
+
+/* ============ FILTERS ============ */
+.filter-bar {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-500);
+  white-space: nowrap;
+}
+
+.filter-select, .filter-input {
+  padding: 7px 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font-size: 13px;
+  min-width: 120px;
+  transition: border-color 0.15s;
+}
+
+.filter-select:focus, .filter-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.filter-reset {
+  margin-left: auto;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+}
+
+.filter-reset:hover {
+  background: var(--gray-100);
+  color: var(--black);
+}
+
+.results-count {
+  font-size: 11px;
+  color: var(--gray-500);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── INLINE FILTER TOOLBAR ────────────────────────────────────── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 14px;
+  flex-wrap: wrap;
+}
+
+.filter-chips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-chip {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gray-200);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: var(--white);
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+}
+
+.filter-chip:hover {
+  border-color: var(--gray-300);
+  background: var(--gray-50);
+  color: var(--black);
+}
+
+.filter-chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ============ TABLE ============ */
+.table-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+table.clients-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.clients-table thead th {
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-600);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.clients-table thead th:hover {
+  background: var(--gray-100);
+}
+
+.clients-table thead th .sort-ind {
+  margin-left: 4px;
+  color: var(--gray-400);
+  font-size: 10px;
+}
+
+.clients-table thead th.sorted-asc .sort-ind,
+.clients-table thead th.sorted-desc .sort-ind {
+  color: var(--primary);
+}
+
+.clients-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 13px;
+  color: var(--gray-700);
+  vertical-align: middle;
+}
+
+.clients-table tbody tr {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.clients-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+.clients-table tbody tr.selected {
+  background: var(--primary-soft);
+}
+
+.client-name-cell {
+  font-weight: 600;
+  color: var(--black);
+}
+
+.client-name-cell .client-title {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+
+.region-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  white-space: nowrap;
+}
+
+.region-tag.fr     { background: #e8edff; color: #2548d4; }
+.region-tag.mena   { background: #fef3c7; color: #b45309; }
+.region-tag.asia   { background: #d1fae5; color: #065f46; }
+.region-tag.amlat  { background: #ede9fe; color: #5b21b6; }
+.region-tag.europe { background: #e0e7ff; color: #3730a3; }
+.region-tag.afr    { background: #fce7f3; color: #9d174d; }
+.region-tag.eng    { background: #e0f2fe; color: #0369a1; }
+
+.num-cell { font-family: 'JetBrains Mono', monospace; text-align: right; }
+.nd-cell  { color: var(--gray-300); font-size: 11px; }
+
+/* ── Tonalité ── */
+.tonality-pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+.tonality-positive { background: #d1fae5; color: #065f46; }
+.tonality-neutral  { background: var(--gray-100); color: var(--gray-600); }
+.tonality-negative { background: #fee2e2; color: #991b1b; }
+
+/* ── Table améliorée ── */
+.clients-table tbody tr { transition: background 0.12s; cursor: pointer; }
+.clients-table tbody tr:hover { background: #f5f7ff; }
+.clients-table tbody tr.selected { background: #eef1ff; box-shadow: inset 3px 0 0 var(--primary); }
+.client-name-cell { font-weight: 600; }
+.client-title { font-size: 11px; color: var(--gray-500); font-weight: 400; margin-top: 2px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Chart card ── */
+.chart-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 24px; box-shadow: var(--shadow-sm); }
+.chart-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
+.chart-title { font-size: 14px; font-weight: 600; color: var(--black); }
+.chart-toggle { display: flex; gap: 3px; flex-wrap: wrap; background: var(--gray-100); border-radius: 8px; padding: 3px; }
+.chart-toggle button { padding: 5px 11px; font-size: 11px; font-weight: 500; color: var(--gray-600); border-radius: 5px; transition: all 0.15s; }
+.chart-toggle button.active { background: var(--white); color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; }
+.chart-toggle button:hover:not(.active) { color: var(--black); }
+
+/* ============ DETAIL PANEL ============ */
+/* ── DETAIL PANEL : panneau glissant ───────────────────────────── */
+.detail-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 540px;
+  max-width: 100vw;
+  background: var(--white);
+  border-left: 1px solid var(--gray-200);
+  box-shadow: -4px 0 24px rgba(0,0,0,0.08);
+  z-index: 100;
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.detail-panel.open { transform: translateX(0); }
+
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.2);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.detail-overlay.open { opacity: 1; pointer-events: auto; }
+
+.detail-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--gray-200);
+  position: sticky;
+  top: 0;
+  background: var(--white);
+  z-index: 1;
+}
+
+.detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-500);
+  font-size: 18px;
+  transition: all 0.15s;
+}
+
+.detail-close:hover {
+  background: var(--gray-100);
+  color: var(--black);
+}
+
+.detail-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.detail-subtitle {
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.detail-body {
+  padding: 24px 28px;
+}
+
+.detail-section {
+  margin-bottom: 28px;
+}
+
+.detail-section h4 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gray-500);
+  margin-bottom: 12px;
+}
+
+.detail-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.detail-kpi {
+  padding: 12px 14px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+}
+
+.detail-kpi-label {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-bottom: 4px;
+}
+
+.detail-kpi-value {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-feature-settings: 'tnum';
+}
+
+.timeline {
+  border-left: 2px solid var(--gray-200);
+  padding-left: 16px;
+  margin-left: 6px;
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -22px;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  background: var(--primary);
+  border-radius: 50%;
+  border: 2px solid var(--white);
+}
+
+.timeline-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.timeline-event {
+  font-size: 13px;
+  color: var(--gray-700);
+  margin-top: 2px;
+}
+
+.media-list {
+  list-style: none;
+}
+
+.media-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-100);
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.media-list li:last-child { border: none; }
+
+.media-name { font-weight: 500; }
+.media-meta { color: var(--gray-500); font-size: 12px; }
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 40px;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.bar-row .bar-label { color: var(--gray-700); }
+.bar-row .bar-track {
+  background: var(--gray-100);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-row .bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+.bar-row .bar-value {
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
+.empty-state {
+  padding: 16px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  color: var(--gray-500);
+  font-size: 13px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ── BILLING ───────────────────────────────────────────────────── */
+.billing-grid {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.billing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.billing-row:last-child { border-bottom: none; }
+
+.billing-label { color: var(--gray-500); font-size: 12px; }
+
+.billing-total {
+  background: var(--gray-50);
+  font-weight: 700;
+  color: var(--black);
+}
+
+.billing-total .billing-label { color: var(--gray-700); font-weight: 600; font-size: 13px; }
+
+.billing-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--black);
+}
+
+.billing-total .billing-amount {
+  font-size: 15px;
+  color: var(--primary);
+}
+
+/* ============ COMPARATIVE ============ */
+.comparative-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .comparative-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============ BOOST BADGE ============ */
+.boost-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  vertical-align: middle;
+  background: linear-gradient(135deg, #ff8a00 0%, #ffb800 100%);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(255, 138, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  white-space: nowrap;
+}
+.boost-badge::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  clip-path: polygon(50% 0%, 0% 60%, 40% 60%, 30% 100%, 100% 35%, 60% 35%, 70% 0%);
+}
+.boost-badge.no {
+  background: var(--gray-100);
+  color: var(--gray-500);
+  box-shadow: none;
+}
+.boost-badge.no::before {
+  background: var(--gray-400);
+}
+.boost-badge-lg {
+  padding: 6px 14px;
+  font-size: 12px;
+  gap: 6px;
+}
+.boost-badge-lg::before {
+  width: 11px;
+  height: 11px;
+}
+
+/* ============ EXECUTIVE PERFORMANCE PANEL ============ */
+/* ── EXEC PANEL : Executive Performance Panel ──────────────────── */
+.exec-panel {
+  background: linear-gradient(135deg, #0c1442 0%, #1a2a6b 60%, #2a3da3 100%);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(12, 20, 66, 0.25);
+}
+.exec-panel::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -10%;
+  width: 60%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(50, 90, 255, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+}
+.exec-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.exec-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.exec-panel-title h3 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.exec-panel-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8aa1ff;
+  margin-bottom: 4px;
+}
+.exec-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00ff9d;
+  box-shadow: 0 0 8px #00ff9d;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+.exec-panel-meta {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.exec-metrics {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 24px;
+}
+.exec-metric {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 20px 22px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+}
+.exec-metric:hover {
+  background: rgba(255,255,255,0.07);
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-2px);
+}
+.exec-metric.hero {
+  background: linear-gradient(135deg, rgba(50, 90, 255, 0.25), rgba(0, 194, 168, 0.15));
+  border-color: rgba(138, 161, 255, 0.3);
+}
+.exec-metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  margin-bottom: 10px;
+}
+.exec-metric-value {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  margin-bottom: 6px;
+  font-feature-settings: 'tnum';
+}
+.exec-metric.hero .exec-metric-value {
+  font-size: 38px;
+  background: linear-gradient(135deg, #fff 0%, #8aa1ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.exec-metric-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 500;
+  line-height: 1.4;
+}
+.exec-metric-suffix {
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  margin-left: 2px;
+}
+.exec-score-bar {
+  margin-top: 12px;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.exec-score-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00c2a8 0%, #325aff 100%);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+.exec-ranking {
+  position: relative;
+  z-index: 1;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+}
+.exec-ranking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.exec-ranking-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.6);
+}
+.exec-ranking-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 6px;
+  padding: 3px;
+}
+.exec-ranking-tabs button {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.exec-ranking-tabs button:hover {
+  color: rgba(255,255,255,0.85);
+}
+.exec-ranking-tabs button.active {
+  background: rgba(50, 90, 255, 0.4);
+  color: #fff;
+}
+.exec-rank-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.exec-rank-row:last-child { border-bottom: none; }
+.exec-rank-row:hover {
+  background: rgba(255,255,255,0.03);
+  padding-left: 8px;
+  padding-right: 8px;
+  margin-left: -8px;
+  margin-right: -8px;
+  border-radius: 6px;
+}
+.exec-rank-position {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  font-family: 'JetBrains Mono', monospace;
+}
+.exec-rank-row:nth-child(1) .exec-rank-position { color: #ffd700; }
+.exec-rank-row:nth-child(2) .exec-rank-position { color: #c0c0c0; }
+.exec-rank-row:nth-child(3) .exec-rank-position { color: #cd7f32; }
+.exec-rank-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.exec-rank-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.exec-rank-meta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.exec-rank-score {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 140px;
+}
+.exec-rank-score-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 60px;
+}
+.exec-rank-score-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00c2a8 0%, #325aff 100%);
+  border-radius: 3px;
+}
+.exec-rank-score-value {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+  min-width: 30px;
+  text-align: right;
+}
+.exec-rank-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 255, 157, 0.15);
+  color: #00ff9d;
+}
+
+@media (max-width: 980px) {
+  .exec-metrics { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .exec-panel { padding: 22px 18px; }
+  .exec-metrics { grid-template-columns: 1fr; }
+  .exec-metric-value { font-size: 26px; }
+  .exec-rank-score { min-width: 100px; }
+}
+
+/* legacy legend swatch reused in detail panel */
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* ============ MANAGEMENT ============ */
+.mgmt-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--gray-200);
+  background: var(--white);
+  color: var(--gray-700);
+  transition: all 0.15s;
+}
+
+.btn:hover {
+  border-color: var(--gray-300);
+  background: var(--gray-50);
+}
+
+.btn-primary {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-accent {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+
+.btn-accent:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+/* ============ AI QUERY ============ */
+.ai-card {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 28px;
+}
+
+.ai-key-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-200);
+}
+
+.ai-key-row label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  white-space: nowrap;
+}
+
+.ai-key-row input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.ai-key-row input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.ai-key-status {
+  font-size: 11px;
+  color: var(--gray-500);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.ai-key-status.ok { color: var(--accent-teal); }
+
+.ai-question-area {
+  display: flex;
+  gap: 10px;
+}
+
+.ai-question-input {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--white);
+}
+
+.ai-question-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.ai-submit {
+  padding: 11px 18px;
+  background: var(--primary);
+  color: var(--white);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.ai-submit:hover { background: var(--primary-dark); }
+.ai-submit:disabled { background: var(--gray-300); cursor: not-allowed; }
+
+.ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ai-suggestion {
+  padding: 6px 12px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--gray-600);
+  transition: all 0.15s;
+}
+
+.ai-suggestion:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ai-response {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--gray-50);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--gray-700);
+  min-height: 60px;
+  white-space: pre-wrap;
+  border: 1px solid var(--gray-200);
+}
+
+.ai-response.empty {
+  color: var(--gray-400);
+  font-style: italic;
+}
+
+.ai-response.error {
+  background: #fbe9e0;
+  border-color: #f5c8b3;
+  color: #8a2a0a;
+}
+
+.ai-loading {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.ai-loading span {
+  width: 6px;
+  height: 6px;
+  background: var(--primary);
+  border-radius: 50%;
+  animation: pulse 1.4s infinite ease-in-out both;
+}
+
+.ai-loading span:nth-child(2) { animation-delay: 0.2s; }
+.ai-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 80%, 100% { transform: scale(0.5); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ============ MODAL ============ */
+/* ── MODALS ────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  max-width: 640px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-field.full { grid-column: span 2; }
+
+.form-field label {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-500);
+  margin-bottom: 6px;
+}
+
+.form-field input, .form-field select, .form-field textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+/* ============ NOTIF / FOOTER ============ */
+.notif {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 18px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  z-index: 300;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.25s;
+}
+
+.notif.show { transform: translateY(0); opacity: 1; }
+
+.app-footer {
+  text-align: center;
+  padding: 32px 40px;
+  color: var(--gray-400);
+  font-size: 12px;
+  border-top: 1px solid var(--gray-200);
+  background: var(--white);
+  margin-left: 240px;
+}
+
+/* ============ PRINT ============ */
+@media print {
+  .app-sidebar { display: none !important; }
+  .app-header { position: relative; box-shadow: none; border-bottom: 2px solid var(--black); margin-left: 0; }
+  main { padding: 0; margin-left: 0; }
+  .app-footer { margin-left: 0; }
+  .filter-bar, .table-toolbar, .mgmt-actions, .ai-card, .detail-panel, .modal-overlay, .notif { display: none !important; }
+  section { page-break-inside: avoid; margin-bottom: 24px; }
+  .chart-card, .kpi-card, .table-card, .exec-panel { box-shadow: none; border-color: var(--gray-300); }
+  .exec-panel { background: var(--white) !important; color: var(--black) !important; }
+  .exec-panel * { color: var(--black) !important; }
+  body { background: var(--white); }
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1024px) {
+  .app-sidebar { transform: translateX(-100%); }
+  .app-sidebar.mobile-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.12); }
+  .app-header { margin-left: 0; padding: 0 20px; }
+  main { margin-left: 0; padding: 20px 16px 60px; }
+  .detail-panel { width: 100vw; }
+  .app-footer { margin-left: 0; }
+}
+
+@media (max-width: 720px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpi-value { font-size: 22px; }
+  .clients-table thead th, .clients-table tbody td { padding: 10px 12px; font-size: 12px; }
+  .toolbar-right { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .table-toolbar { flex-direction: column; align-items: flex-start; }
+}
+
+.btn-onedrive {
+  background: #0078d4;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.btn-onedrive:hover { background: #006cbe; color: #fff; }
+.btn-onedrive:disabled { background: #8ab8e8; cursor: not-allowed; }
+
+
+.btn-github {
+  background: #24292e;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}
+.btn-github:hover { background: #1a1e22; color: #fff; }
+
+
+/* ── LOGIN SCREEN ──────────────────────────────────────────────── */
+/* ── LOGIN SCREEN ─────────────────────────────────────────────── */
+#loginScreen {
+  position: fixed;
+  inset: 0;
+  background: #0a0f1e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  font-family: 'Inter', Arial, sans-serif;
+}
+#loginScreen.hidden { display: none; }
+
+.login-card {
+  background: #111827;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  padding: 48px 44px 40px;
+  width: 380px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.login-logo {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #325AFF;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+  letter-spacing: -.02em;
+}
+.login-sub {
+  font-size: 13px;
+  color: rgba(255,255,255,.4);
+  margin-bottom: 32px;
+}
+.login-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.5);
+  margin-bottom: 8px;
+  display: block;
+}
+.login-input {
+  width: 100%;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.06);
+  border: 1.5px solid rgba(255,255,255,.1);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s;
+  box-sizing: border-box;
+  letter-spacing: .08em;
+}
+.login-input:focus { border-color: #325AFF; }
+.login-input.error { border-color: #ef4444; }
+.login-error {
+  font-size: 12px;
+  color: #ef4444;
+  margin-top: 8px;
+  min-height: 16px;
+  display: none;
+}
+.login-error.show { display: block; }
+.login-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 13px;
+  background: #325AFF;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s;
+  letter-spacing: -.01em;
+}
+.login-btn:hover { background: #2347e0; }
+.login-btn:active { background: #1a35cc; }
+.login-footer {
+  margin-top: 24px;
+  font-size: 11px;
+  color: rgba(255,255,255,.2);
+  text-align: center;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">AFP</div>
+    <div class="login-title">Dashboard DDD</div>
+    <div class="login-sub">Distribution et Diffusion Digitale</div>
+    <label class="login-label" for="loginPwd">Mot de passe</label>
+    <input
+      class="login-input"
+      type="password"
+      id="loginPwd"
+      placeholder="••••••••••••"
+      autocomplete="current-password"
+      onkeydown="if(event.key==='Enter') checkLogin()"
+    >
+    <div class="login-error" id="loginError">Mot de passe incorrect.</div>
+    <button class="login-btn" onclick="checkLogin()">Accéder au dashboard</button>
+    <div class="login-footer">Accès réservé à l'équipe AFP DDD</div>
+  </div>
+</div>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+
+
+<!-- ══ SIDEBAR ═════════════════════════════════════════════════════════ -->
+<nav class="app-sidebar" id="appSidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">AFP</div>
+    <div>
+      <div class="sidebar-brand-name">Dashboard DDD</div>
+      <div class="sidebar-brand-sub">Distribution &amp; Diffusion Digitale</div>
+    </div>
+  </div>
+  <div class="sidebar-nav">
+    <span class="sidebar-label">Navigation</span>
+    <a class="nav-item active" href="#overview" data-section="overview">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/></svg>
+      Vue d'ensemble
+    </a>
+    <a class="nav-item" href="#comparative" data-section="comparative">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 12l3-4 3 2.5 3-5 3 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 14h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Performance
+    </a>
+    <a class="nav-item" href="#clientsSection" data-section="clientsSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/><rect x="2" y="7.1" width="12" height="1.8" rx="0.9" fill="currentColor"/><rect x="2" y="11.2" width="7" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/></svg>
+      Campagnes
+    </a>
+    <span class="sidebar-label" style="margin-top:8px;">Outils</span>
+    <a class="nav-item" href="#management" data-section="management">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.4"/></svg>
+      Données
+    </a>
+    <a class="nav-item" href="#aiSection" data-section="aiSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.3 3.2L13 6l-2.8 2.7L11 12.5 8 10.8l-3 1.7.8-3.8L3 6l3.7-.8L8 1.5z" fill="currentColor" opacity=".75"/></svg>
+      Requêtes IA
+    </a>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-source">
+      <div class="sidebar-source-dot" id="sidebarSourceDot"></div>
+      <span class="sidebar-source-label" id="sidebarSourceLabel">Chargement…</span>
+    </div>
+  </div>
+</nav>
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <span class="header-title" id="headerTitle">Vue d'ensemble</span>
+    </div>
+    <div class="header-actions">
+      <div class="gen-info" id="genInfo">—</div>
+      <button class="btn" id="printBtn" style="font-size:12px;padding:5px 12px;">Imprimer PDF</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- VUE ENSEMBLE -->
+  <section id="overview">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Vue d'ensemble</div>
+        <div class="section-desc" id="overviewDesc">Synthèse consolidée sur la période sélectionnée</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi-card kpi-primary">
+        <div class="kpi-label"><span class="kpi-label-dot"></span>Clients monitorés</div>
+        <div class="kpi-value" id="kpiClients">0</div>
+        <div class="kpi-trend" id="kpiClientsTrend">campagnes actives</div>
+      </div>
+      <div class="kpi-card kpi-organic">
+        <div class="kpi-label"><span class="kpi-label-dot"></span>Pick-ups</div>
+        <div class="kpi-value" id="kpiOrganic">0</div>
+        <div class="kpi-trend" id="kpiOrganicTrend">retombées éditoriales organiques</div>
+      </div>
+      <div class="kpi-card kpi-boost">
+        <div class="kpi-label"><span class="kpi-label-dot"></span>Media Boost</div>
+        <div class="kpi-value" id="kpiPartnerships">0</div>
+        <div class="kpi-trend" id="kpiPartnershipsTrend">reprises via option BOOST</div>
+      </div>
+      <div class="kpi-card kpi-total">
+        <div class="kpi-label"><span class="kpi-label-dot"></span>Total Pick-ups</div>
+        <div class="kpi-value" id="kpiTotalVisibility">0</div>
+        <div class="kpi-trend" id="kpiTotalVisibilityTrend">pick-ups + media boost</div>
+      </div>
+      <div class="kpi-card kpi-views">
+        <div class="kpi-label"><span class="kpi-label-dot"></span>Views</div>
+        <div class="kpi-value" id="kpiViews">0</div>
+        <div class="kpi-trend" id="kpiViewsTrend">vues uniques cumulées</div>
+      </div>
+      <div class="kpi-card kpi-outlets">
+        <div class="kpi-label"><span class="kpi-label-dot"></span>Régions AFP</div>
+        <div class="kpi-value" id="kpiZones">0</div>
+        <div class="kpi-trend" id="kpiZonesTrend">régions AFP couvertes</div>
+      </div>
+      <div class="kpi-card" style="--accent:#f59e0b;">
+        <div class="kpi-label"><span class="kpi-label-dot" style="background:#f59e0b;"></span>Taux d'ouverture moy.</div>
+        <div class="kpi-value" id="kpiAvgOpen">0<span class="unit">%</span></div>
+        <div class="kpi-trend" id="kpiAvgOpenTrend">moyenne sur campagnes renseignées</div>
+      </div>
+      <div class="kpi-card" style="--accent:#10b981;">
+        <div class="kpi-label"><span class="kpi-label-dot" style="background:#10b981;"></span>Taux de clic moy.</div>
+        <div class="kpi-value" id="kpiAvgClic">0<span class="unit">%</span></div>
+        <div class="kpi-trend" id="kpiAvgClicTrend">moyenne sur campagnes renseignées</div>
+      </div>
+      <div class="kpi-card" style="--accent:#6366f1;">
+        <div class="kpi-label"><span class="kpi-label-dot" style="background:#6366f1;"></span>Chiffre d'affaires</div>
+        <div class="kpi-value" id="kpiRevenue"><span class="unit" style="font-size:16px;">n/d</span></div>
+        <div class="kpi-trend" id="kpiRevenueTrend">données non renseignées dans l'Excel</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div class="chart-title">Évolution mensuelle des retombées</div>
+        <div class="chart-toggle" id="monthlyToggle">
+          <button data-metric="vues" class="active">Vues</button>
+          <button data-metric="emails">Emails ciblés</button>
+          <button data-metric="campagnes">Campagnes</button>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- TABLEAU -->
+  <section id="clientsSection">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Campagnes</div>
+        <div class="section-desc">Cliquez une ligne pour ouvrir le panneau détaillé</div>
+      </div>
+      <div class="results-count" id="resultsCount"></div>
+    </div>
+    <div class="table-toolbar">
+      <div class="filter-chips" id="regionChips">
+        <button class="filter-chip active" data-region="all">Toutes</button>
+      </div>
+      <div class="toolbar-right">
+        <input class="filter-input" id="filterClient" placeholder="Rechercher…" type="search" style="width:150px;">
+        <select class="filter-select" id="filterPeriod">
+          <option value="all">Tout l'historique</option>
+          <option value="1m">30 derniers jours</option>
+          <option value="3m">3 mois</option>
+          <option value="6m">6 mois</option>
+          <option value="2026">2026</option>
+        </select>
+        <select class="filter-select" id="filterContent">
+          <option value="all">Tous types</option>
+          <option value="Texte">Texte</option>
+          <option value="Photo">Photo</option>
+          <option value="Vidéo">Vidéo</option>
+        </select>
+        <button class="filter-reset" id="filterReset" title="Réinitialiser les filtres" style="padding:7px 10px;">↺</button>
+      </div>
+    </div>
+    <select id="filterRegion" style="display:none;"></select>
+    <div class="table-card">
+      <table class="clients-table" id="clientsTable">
+        <thead>
+          <tr>
+            <th data-col="nom">Client <span class="sort-ind"></span></th>
+            <th data-col="datePublication">Publication <span class="sort-ind"></span></th>
+            <th data-col="regionAFP">Région AFP <span class="sort-ind"></span></th>
+            <th data-col="boost">BOOST <span class="sort-ind"></span></th>
+            <th data-col="tauxOuverture" class="num-cell">Ouv. <span class="sort-ind"></span></th>
+            <th data-col="tauxClic" class="num-cell">Clic <span class="sort-ind"></span></th>
+            <th data-col="vuesUniques" class="num-cell">Views <span class="sort-ind"></span></th>
+            <th data-col="pickups" class="num-cell">Pick-ups <span class="sort-ind"></span></th>
+            <th data-col="mediaBoost" class="num-cell">Media Boost <span class="sort-ind"></span></th>
+            <th data-col="totalPickups" class="num-cell">Total <span class="sort-ind"></span></th>
+          </tr>
+        </thead>
+        <tbody id="clientsTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- COMPARATIVE -->
+  <section id="comparative">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Vue comparative cross-clients</div>
+        <div class="section-desc">Performances triées et angles porteurs</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div class="chart-title">Performances par client, triées</div>
+        <div class="chart-toggle" id="compToggle">
+          <button data-metric="vues" class="active">Views</button>
+          <button data-metric="totalVis">Total Pick-ups</button>
+          <button data-metric="organic">Organic</button>
+          <button data-metric="partnerships">Partnerships</button>
+          <button data-metric="tauxOuverture">Ouverture</button>
+          <button data-metric="tauxClic">Clic</button>
+        </div>
+      </div>
+      <div class="chart-canvas-wrap" style="height: 480px;">
+        <canvas id="compChart"></canvas>
+      </div>
+    </div>
+
+    <!-- EXECUTIVE PERFORMANCE PANEL (remplace la heatmap) -->
+    <div class="exec-panel" id="execPanel">
+      <div class="exec-panel-header">
+        <div>
+          <div class="exec-panel-eyebrow">Executive Briefing</div>
+          <div class="exec-panel-title">
+            <span class="exec-live-dot"></span>
+            <h3>Global Visibility Performance</h3>
+          </div>
+        </div>
+        <div class="exec-panel-meta" id="execPanelMeta">Live · ranked across selection</div>
+      </div>
+
+      <div class="exec-metrics" id="execMetrics"></div>
+
+      <div class="exec-ranking">
+        <div class="exec-ranking-header">
+          <div class="exec-ranking-title">Top Performing Campaigns</div>
+          <div class="exec-ranking-tabs" id="execRankTabs">
+            <button data-rank="visibility" class="active">Visibility</button>
+            <button data-rank="engagement">Engagement</button>
+            <button data-rank="reach">Media Reach</button>
+          </div>
+        </div>
+        <div id="execRankingList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANAGEMENT -->
+  <section id="management">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Gestion des données</div>
+        <div class="section-desc">Importer un fichier Excel, ajouter de nouveaux rapports, sauvegarder ou partager l'état du dashboard</div>
+      </div>
+    </div>
+    <div class="mgmt-actions">
+      <button class="btn btn-github" id="reloadJsonBtn" onclick="forceReloadFromJson()" title="Recharger les données depuis data.json sur GitHub Pages">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="margin-right:5px;vertical-align:-2px"><path d="M4 10a6 6 0 1 0 1.27-3.74" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M4 5v5h5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Recharger depuis GitHub
+      </button>
+      <button class="btn btn-onedrive" id="syncOneDriveBtn">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="margin-right:5px;vertical-align:-2px"><path d="M10.5 3a5.5 5.5 0 0 0-5.26 3.9A4 4 0 0 0 6 14.5h9a3.5 3.5 0 0 0 .5-6.97A5.5 5.5 0 0 0 10.5 3Z" fill="currentColor" opacity=".3"/><path d="M7 10.5l3 3 3-3M10 13.5V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Synchroniser depuis OneDrive
+      </button>
+      <button class="btn btn-accent" id="importExcelBtn">Importer un fichier Excel</button>
+      <button class="btn" id="addReportBtn">Ajouter un rapport manuellement</button>
+      <button class="btn" id="exportJsonBtn">Exporter les données (JSON)</button>
+      <button class="btn" id="importJsonBtn">Importer un fichier JSON</button>
+      <button class="btn" id="resetLocalBtn">Réinitialiser aux données d'origine</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none;">
+      <input type="file" id="importExcelFile" accept=".xlsx,.xls,.csv" style="display:none;">
+    </div>
+  </section>
+
+  <!-- AI QUERY -->
+  <section id="aiSection">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Interroge tes données</div>
+        <div class="section-desc">Pose une question en langage naturel, Claude Haiku répond à partir des données chargées</div>
+      </div>
+    </div>
+    <div class="ai-card">
+      <div class="ai-key-row">
+        <label for="apiKey">Clé API Anthropic</label>
+        <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+        <span class="ai-key-status" id="keyStatus">Non renseignée</span>
+      </div>
+
+      <div class="ai-question-area">
+        <input type="text" class="ai-question-input" id="aiQuestion" placeholder="Quel client a le mieux performé ce trimestre ?">
+        <button class="ai-submit" id="aiSubmit">Envoyer</button>
+      </div>
+
+      <div class="ai-suggestions" id="aiSuggestions">
+        <button class="ai-suggestion">Quel client a le mieux performé ce trimestre ?</button>
+        <button class="ai-suggestion">Quels médias reviennent le plus souvent toutes campagnes confondues ?</button>
+        <button class="ai-suggestion">Y a-t-il une saisonnalité dans les pics de reprise ?</button>
+        <button class="ai-suggestion">Compare les performances MENA et FR</button>
+        <button class="ai-suggestion">Quels angles éditoriaux sont les plus porteurs ?</button>
+      </div>
+
+      <div class="ai-response empty" id="aiResponse">La réponse s'affichera ici en streaming.</div>
+    </div>
+  </section>
+
+</main>
+
+<!-- DETAIL PANEL -->
+<div class="detail-overlay" id="detailOverlay"></div>
+<aside class="detail-panel" id="detailPanel" aria-hidden="true">
+  <div class="detail-header">
+    <button class="detail-close" id="detailClose" aria-label="Fermer">×</button>
+    <div class="detail-title" id="detailTitle"></div>
+    <div class="detail-subtitle" id="detailSubtitle"></div>
+  </div>
+  <div class="detail-body" id="detailBody"></div>
+</aside>
+
+<!-- ADD REPORT MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Ajouter un rapport de visibilité</div>
+      <button class="detail-close" data-close="addModal">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full">
+          <label>Nom du client</label>
+          <input type="text" id="fNom" placeholder="Ex. Total Énergies">
+        </div>
+        <div class="form-field full">
+          <label>Titre de la campagne</label>
+          <input type="text" id="fTitre" placeholder="Intitulé du communiqué">
+        </div>
+        <div class="form-field">
+          <label>Région DDD</label>
+          <select id="fRegion">
+            <option value="FR">FR</option>
+            <option value="MENA">MENA</option>
+            <option value="ASIA">ASIA</option>
+            <option value="AMLAT">AMLAT</option>
+            <option value="EUROPE">EUROPE</option>
+            <option value="AFR">AFR</option>
+            <option value="ENG">ENG (anglophone)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Date de publication</label>
+          <input type="date" id="fDatePub">
+        </div>
+        <div class="form-field">
+          <label>Date du rapport</label>
+          <input type="date" id="fDateRap">
+        </div>
+        <div class="form-field">
+          <label>Langues (séparer par virgule)</label>
+          <input type="text" id="fLangues" placeholder="FR, EN">
+        </div>
+        <div class="form-field">
+          <label>Emails ciblés</label>
+          <input type="number" id="fEmails" min="0">
+        </div>
+        <div class="form-field">
+          <label>Taux d'ouverture (%)</label>
+          <input type="number" id="fOuverture" min="0" max="100" step="0.01">
+        </div>
+        <div class="form-field">
+          <label>Taux de clic (%)</label>
+          <input type="number" id="fClic" min="0" max="100" step="0.01">
+        </div>
+        <div class="form-field">
+          <label>Vues uniques</label>
+          <input type="number" id="fVues" min="0">
+        </div>
+        <div class="form-field">
+          <label>Téléchargements texte</label>
+          <input type="number" id="fDlText" min="0">
+        </div>
+        <div class="form-field">
+          <label>Téléchargements photo</label>
+          <input type="number" id="fDlPhoto" min="0">
+        </div>
+        <div class="form-field">
+          <label>Pickups (legacy, total)</label>
+          <input type="number" id="fPickups" min="0">
+        </div>
+        <div class="form-field">
+          <label>Organic pick-ups</label>
+          <input type="number" id="fOrganic" min="0">
+        </div>
+        <div class="form-field">
+          <label>Media partnerships (BOOST)</label>
+          <input type="number" id="fPartnerships" min="0">
+        </div>
+        <div class="form-field">
+          <label>BOOST activé</label>
+          <select id="fBoost">
+            <option value="">Non (par défaut)</option>
+            <option value="yes">Oui</option>
+            <option value="no">Non</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Pressrooms AFP</label>
+          <input type="number" id="fPressrooms" min="0">
+        </div>
+        <div class="form-field">
+          <label>AFP feeds</label>
+          <input type="number" id="fFeeds" min="0">
+        </div>
+        <div class="form-field">
+          <label>Unique media outlets</label>
+          <input type="number" id="fOutlets" min="0">
+        </div>
+        <div class="form-field">
+          <label>Tonalité</label>
+          <select id="fTonalite">
+            <option value="">Non renseignée</option>
+            <option value="positive">Positive</option>
+            <option value="neutral">Neutre</option>
+            <option value="negative">Négative</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>Type de contenu (virgule)</label>
+          <input type="text" id="fTypes" placeholder="Texte, Photo">
+        </div>
+        <div class="form-field full">
+          <label>Thématiques principales (virgule)</label>
+          <input type="text" id="fThemes" placeholder="Sustainability, Tech, Sport">
+        </div>
+        <div class="form-field full">
+          <label>Top médias (virgule)</label>
+          <input type="text" id="fMedias" placeholder="Le Monde, Les Échos, Reuters">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-close="addModal">Annuler</button>
+      <button class="btn btn-accent" id="saveReportBtn">Enregistrer le rapport</button>
+    </div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<footer class="app-footer">
+  Dashboard de visibilité clients, équipe DDD AFP. Fichier autonome, exécutable hors ligne après premier chargement des CDN.
+</footer>
+
+<script>
+// =====================================================================
+// DONNÉES, modifier ici pour mettre à jour
+// =====================================================================
+// Structure d'un rapport :
+// {
+//   id: identifiant unique en snake_case
+//   nom: nom du client
+//   titreCampagne: intitulé du communiqué
+//   regionDDD: FR, MENA, ASIA, AMLAT, EUROPE, AFR, ENG
+//   datePublication: ISO YYYY-MM-DD
+//   dateRapport: ISO YYYY-MM-DD
+//   formats: liste des supports
+//   langues: liste des langues
+//   typeContenu: liste (Texte, Photo, Vidéo, Infographie)
+//   emailsCibles, tauxOuverture, tauxClic: chiffres bruts ou null si n/d
+//   vuesUniques, telechargementsTexte, telechargementsPhoto: idem
+//   pickups: nombre de retombées éditoriales identifiées, null si n/d
+//   publicationsWeb: nombre de publications sur sites web (Masdar, etc.)
+//   uniqueMediaOutlets: nombre de médias uniques distincts
+//   pressroomsAFP, feedsAFP: chiffres distribution AFP
+//   topPays: top pays avec volumes (objet) ou liste, null si n/d
+//   topMedias: top médias avec volumes (objet) ou liste, null si n/d
+//   thematiques: liste des thématiques principales
+//   tonalite: positive, neutral, negative ou null
+//   pics: liste {date, evenement} pour la timeline
+// }
+const DONNEES_INITIALES = {
+  genereeLe: "2026-05-20",
+  sourceExcel: "AFP_DDD_Dashboard_Data_v2.xlsx",
+  clients: []
+};
+// =====================================================================
+
+// Liste exhaustive des thématiques utilisées dans le dataset
+const THEMES_AXES = [
+  "Sustainability", "Tech", "Sport", "Santé", "Culture",
+  "Innovation", "Énergie", "Politique", "Économie", "Diplomatie",
+  "Climat", "Science", "Recherche", "Luxe", "Société",
+  "Business", "Agriculture", "Humanitaire", "Développement",
+  "Gouvernance", "Art", "Souveraineté", "Agro-alimentaire"
+];
+
+// =====================================================================
+// CONFIGURATION BOOST & SCORING (modifier ici, ou remplacer via Excel)
+// =====================================================================
+// Mapping explicite : client (id) → BOOST actif ou non
+// Source de vérité : fichier Excel Monitoring Dashboard
+const BOOST_CONFIG = {
+  "masdar_adsw_opening":     true,   // BOOST: 626 publications médias
+  "conmebol_giving_football":true,   // BOOST: 232 partenariats médias
+  "moet_hennessy_wlsf":      true,   // BOOST: 566 publications médias
+  "conmebol_anunciou":       true,   // BOOST: 305 partenariats médias
+  // BOOST non activé pour les clients suivants
+  "masdar_adsw_highlights":  false,
+  "masdar_largest_ever":     false,
+  "bremont":                 false,
+  "casa_ecuador":            false,
+};
+
+// Répartition (organique / partenariats) pour clients BOOST
+// Si non listé : tout est compté en pickups organiques
+const BOOST_SPLIT = {}; // Les valeurs réelles viennent du champ pickups/mediaBoost directement
+
+// ============ NORMALISATION DES CLIENTS ============
+function normalizeClient(c) {
+  // BOOST : priorité au champ explicite, sinon BOOST_CONFIG
+  const explicitBoost = (c.boost === true || c.boost === false);
+  const boost = explicitBoost ? c.boost : (BOOST_CONFIG[c.id] === true);
+
+  // regionAFP : accepte regionAFP ou l'ancien regionDDD
+  const regionAFP = c.regionAFP || c.regionDDD || "FR";
+
+  // Pick-ups organiques — champ pickups (nouveau nom) ou organicPickups (legacy)
+  const pickups = c.pickups != null ? c.pickups
+    : (c.organicPickups != null ? c.organicPickups
+    : (c.publicationsWeb != null ? c.publicationsWeb : null));
+
+  // Media Boost — champ mediaBoost ou mediaPartnerships (legacy)
+  const mediaBoost = c.mediaBoost != null ? c.mediaBoost
+    : (c.mediaPartnerships != null ? c.mediaPartnerships : 0);
+
+  // Total pick-ups = pickups + mediaBoost
+  const totalPickups = (pickups != null || mediaBoost > 0)
+    ? (pickups || 0) + (mediaBoost || 0)
+    : null;
+
+  // Scores
+  const visibilityScore = computeVisibilityScore({
+    tauxOuverture: c.tauxOuverture,
+    tauxClic: c.tauxClic,
+    vuesUniques: c.vuesUniques,
+    totalPickups,
+    uniqueMediaOutlets: c.uniqueMediaOutlets,
+    pressroomsAFP: c.pressroomsAFP
+  });
+  const mediaReachScore = computeMediaReachScore({
+    uniqueMediaOutlets: c.uniqueMediaOutlets,
+    pressroomsAFP: c.pressroomsAFP,
+    feedsAFP: c.feedsAFP,
+    totalPickups
+  });
+  const engagementScore = computeEngagementScore({
+    tauxOuverture: c.tauxOuverture,
+    tauxClic: c.tauxClic
+  });
+
+  return Object.assign({}, c, {
+    boost,
+    regionAFP,
+    pickups,
+    mediaBoost,
+    totalPickups,
+    visibilityScore,
+    mediaReachScore,
+    engagementScore
+  });
+}
+
+// Scoring functions — normalisés pour donner ~70-95 sur les bonnes campagnes
+function computeVisibilityScore({ tauxOuverture, tauxClic, vuesUniques, totalPickups, uniqueMediaOutlets, pressroomsAFP }) {
+  const eng = computeEngagementScore({ tauxOuverture, tauxClic });
+  const viewsNorm = vuesUniques != null ? Math.min(100, (vuesUniques / 2000) * 100) : 50;
+  const visNorm = totalPickups != null ? Math.min(100, Math.sqrt(totalPickups) * 10) : 30;
+  const outletsBase = uniqueMediaOutlets || (pressroomsAFP ? pressroomsAFP / 10 : 0);
+  const reachNorm = outletsBase ? Math.min(100, Math.sqrt(outletsBase) * 8) : 30;
+  const score = eng * 0.35 + viewsNorm * 0.2 + visNorm * 0.25 + reachNorm * 0.2;
+  return Math.round(Math.max(0, Math.min(100, score)));
+}
+
+function computeMediaReachScore({ uniqueMediaOutlets, pressroomsAFP, feedsAFP, totalPickups }) {
+  const outletsNorm = uniqueMediaOutlets ? Math.min(100, Math.sqrt(uniqueMediaOutlets) * 8) : null;
+  const pressNorm = pressroomsAFP ? Math.min(100, (pressroomsAFP / 2000) * 100) : null;
+  const feedsNorm = feedsAFP ? Math.min(100, (feedsAFP / 2000) * 100) : null;
+  const visNorm = totalPickups != null ? Math.min(100, Math.sqrt(totalPickups) * 10) : null;
+  const components = [
+    { v: outletsNorm, w: 0.4 },
+    { v: pressNorm, w: 0.25 },
+    { v: feedsNorm, w: 0.2 },
+    { v: visNorm, w: 0.15 }
+  ].filter(x => x.v != null);
+  if (components.length === 0) return 0;
+  const totalW = components.reduce((s, x) => s + x.w, 0);
+  const score = components.reduce((s, x) => s + x.v * x.w, 0) / totalW;
+  return Math.round(Math.max(0, Math.min(100, score)));
+}
+
+function computeEngagementScore({ tauxOuverture, tauxClic }) {
+  // Open ~30%-60% = bon ; Click ~5%-30% = bon
+  if (tauxOuverture == null && tauxClic == null) return 0;
+  const openNorm = tauxOuverture != null ? Math.min(100, (tauxOuverture / 60) * 100) : 50;
+  const clickNorm = tauxClic != null ? Math.min(100, (tauxClic / 30) * 100) : 50;
+  return Math.round(openNorm * 0.45 + clickNorm * 0.55);
+}
+
+// Normalise tous les clients du STATE en place
+function normalizeAllClients() {
+  if (!STATE.donnees || !STATE.donnees.clients) return;
+  STATE.donnees.clients = STATE.donnees.clients.map(normalizeClient);
+}
+
+// ============ STATE ============
+const STATE = {
+  donnees: null,
+  clientsAffiches: [],
+  sortBy: "datePublication",
+  sortDir: "desc",
+  selectedId: null,
+  charts: {},
+  execRankMetric: "visibility",
+  filters: {
+    period: "all",
+    region: "all",
+    content: "all",
+    client: ""
+  }
+};
+
+// ============ UTILS ============
+const fmtNum = (n) => {
+  if (n === null || n === undefined || isNaN(n)) return "n/d";
+  return new Intl.NumberFormat("fr-FR").format(n);
+};
+const fmtPct = (n) => {
+  if (n === null || n === undefined || isNaN(n)) return "n/d";
+  return n.toFixed(2).replace(".", ",") + " %";
+};
+const fmtDate = (iso) => {
+  if (!iso) return "n/d";
+  const d = new Date(iso);
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+};
+const monthLabel = (iso) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+};
+const monthKey = (iso) => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+};
+
+function loadData() {
+  // 1. localStorage override (import manuel ou ajout de rapport)
+  const stored = localStorage.getItem("ddd_dashboard_data");
+  if (stored) {
+    try {
+      STATE.donnees = JSON.parse(stored);
+      normalizeAllClients();
+      showDataSourceBadge("localStorage");
+      return;
+    } catch (e) {
+      console.warn("Stored data parse error, falling back to data.json");
+      localStorage.removeItem("ddd_dashboard_data");
+    }
+  }
+  // 2. Charger data.json (source de vérité GitHub Pages)
+  loadFromDataJson();
+}
+
+function loadFromDataJson() {
+  const base = window.location.href.replace(/\/[^\/]*$/, "/");
+  // Charger data.enc.json (chiffré AES-256-GCM)
+  const dataUrl = base + "data.enc.json";
+
+  fetch(dataUrl + "?t=" + Date.now())
+    .then(r => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then(envelope => decryptData(envelope))
+    .then(data => {
+      STATE.donnees = data;
+      normalizeAllClients();
+      populateRegionFilter();
+      renderAll();
+      showDataSourceBadge("github");
+      console.log("[AFP DDD] data.enc.json déchiffré:", data.clients.length, "clients");
+    })
+    .catch(err => {
+      console.warn("[AFP DDD] Chargement échoué:", err);
+      STATE.donnees = JSON.parse(JSON.stringify(DONNEES_INITIALES));
+      normalizeAllClients();
+      showDataSourceBadge("fallback");
+    });
+}
+
+// Déchiffre le contenu AES-256-GCM avec le mot de passe du dashboard
+async function decryptData(envelope) {
+  if (!envelope || envelope.v !== 1) throw new Error("Format invalide");
+
+  // Récupérer le mot de passe depuis la session (saisi au login)
+  const pwd = sessionStorage.getItem("ddd_pwd");
+  if (!pwd) throw new Error("Session expirée — reconnecte-toi");
+
+  // Décoder le blob base64
+  const raw = Uint8Array.from(atob(envelope.data), c => c.charCodeAt(0));
+  const salt       = raw.slice(0, 16);
+  const iv         = raw.slice(16, 28);
+  const ciphertext = raw.slice(28);
+
+  // Dériver la clé via PBKDF2
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(pwd),
+    "PBKDF2", false, ["deriveKey"]
+  );
+  const key = await crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false, ["decrypt"]
+  );
+
+  // Déchiffrer
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key, ciphertext
+  );
+
+  return JSON.parse(new TextDecoder().decode(decrypted));
+}
+
+function showDataSourceBadge(source) {
+  const labels = {
+    github:       { text: "Données GitHub",    color: "#22c55e" },
+    localStorage: { text: "Données locales",   color: "#f59e0b" },
+    fallback:     { text: "Données intégrées", color: "#94a3b8" },
+  };
+  const l = labels[source] || labels.fallback;
+  // Header badge (kept for compat)
+  const el = document.getElementById("dataSourceBadge");
+  if (el) { el.textContent = l.text; el.style.color = l.color; }
+  // Sidebar source indicator
+  const dot   = document.getElementById("sidebarSourceDot");
+  const label = document.getElementById("sidebarSourceLabel");
+  if (dot)   { dot.className = "sidebar-source-dot " + source; }
+  if (label) { label.textContent = l.text; }
+}
+
+// Forcer le rechargement depuis data.json (ignore localStorage)
+function forceReloadFromJson() {
+  localStorage.removeItem("ddd_dashboard_data");
+  loadFromDataJson();
+  showNotif("Rechargement depuis data.json...");
+}
+
+function persistData() {
+  localStorage.setItem("ddd_dashboard_data", JSON.stringify(STATE.donnees));
+}
+
+// ============ FILTERS ============
+function applyFilters() {
+  let arr = [...STATE.donnees.clients];
+  const now = new Date("2026-05-13");
+  const f = STATE.filters;
+
+  if (f.period !== "all") {
+    let cutoff;
+    if (f.period === "1m") cutoff = new Date(now.getTime() - 30 * 86400000);
+    if (f.period === "3m") cutoff = new Date(now.getTime() - 90 * 86400000);
+    if (f.period === "6m") cutoff = new Date(now.getTime() - 180 * 86400000);
+    if (f.period === "2026") cutoff = new Date("2026-01-01");
+    if (cutoff) arr = arr.filter(c => new Date(c.datePublication) >= cutoff);
+  }
+  if (f.region !== "all") arr = arr.filter(c => c.regionAFP === f.region);
+  if (f.content !== "all") arr = arr.filter(c => (c.typeContenu || []).includes(f.content));
+  if (f.client) {
+    const q = f.client.toLowerCase();
+    arr = arr.filter(c => c.nom.toLowerCase().includes(q) || (c.titreCampagne || "").toLowerCase().includes(q));
+  }
+
+  // Sort
+  arr.sort((a, b) => {
+    const av = a[STATE.sortBy];
+    const bv = b[STATE.sortBy];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    let cmp;
+    if (typeof av === "number") cmp = av - bv;
+    else cmp = String(av).localeCompare(String(bv));
+    return STATE.sortDir === "asc" ? cmp : -cmp;
+  });
+
+  STATE.clientsAffiches = arr;
+}
+
+// ============ KPI RENDER ============
+function renderKPIs() {
+  const arr = STATE.clientsAffiches;
+  document.getElementById("kpiClients").textContent = fmtNum(arr.length);
+
+  const picks      = arr.reduce((s, c) => s + (c.pickups    || 0), 0);
+  const mboost     = arr.reduce((s, c) => s + (c.mediaBoost || 0), 0);
+  const total      = arr.reduce((s, c) => s + (c.totalPickups || 0), 0);
+  const views      = arr.reduce((s, c) => s + (c.vuesUniques  || 0), 0);
+  const regions    = new Set(arr.map(c => c.regionAFP || c.regionDDD));
+  const boostCount = arr.filter(c => c.boost).length;
+
+  // Moyennes taux — uniquement sur campagnes renseignées
+  const openArr  = arr.filter(c => c.tauxOuverture != null);
+  const clicArr  = arr.filter(c => c.tauxClic      != null);
+  const avgOpen  = openArr.length ? openArr.reduce((s, c) => s + c.tauxOuverture, 0) / openArr.length : null;
+  const avgClic  = clicArr.length ? clicArr.reduce((s, c) => s + c.tauxClic,      0) / clicArr.length : null;
+
+  document.getElementById("kpiOrganic").textContent         = fmtNum(picks);
+  document.getElementById("kpiPartnerships").textContent    = fmtNum(mboost);
+  document.getElementById("kpiTotalVisibility").textContent = fmtNum(total);
+  document.getElementById("kpiViews").textContent           = fmtNum(views);
+  document.getElementById("kpiZones").textContent           = fmtNum(regions.size);
+  document.getElementById("kpiAvgOpen").innerHTML =
+    avgOpen != null ? avgOpen.toFixed(2).replace(".", ",") + '<span class="unit">%</span>' : '<span class="unit">n/d</span>';
+  document.getElementById("kpiAvgClic").innerHTML =
+    avgClic != null ? avgClic.toFixed(2).replace(".", ",") + '<span class="unit">%</span>' : '<span class="unit">n/d</span>';
+
+  document.getElementById("kpiOrganicTrend").textContent      = "retombées éditoriales organiques";
+  document.getElementById("kpiPartnershipsTrend").textContent =
+    boostCount + " campagne" + (boostCount > 1 ? "s" : "") + " BOOST activée" + (boostCount > 1 ? "s" : "");
+  document.getElementById("kpiTotalVisibilityTrend").textContent = "pick-ups + media boost";
+  document.getElementById("kpiAvgOpenTrend").textContent =
+    openArr.length + " campagne" + (openArr.length > 1 ? "s" : "") + " renseignée" + (openArr.length > 1 ? "s" : "");
+  document.getElementById("kpiAvgClicTrend").textContent =
+    clicArr.length + " campagne" + (clicArr.length > 1 ? "s" : "") + " renseignée" + (clicArr.length > 1 ? "s" : "");
+
+  // Revenue KPI (prixCampagne + prixBoost si renseignés)
+  const hasRevenue = arr.some(c => c.prixCampagne != null || c.prixBoost != null);
+  const revenue = arr.reduce((s, c) => s + (c.prixCampagne || 0) + (c.prixBoost || 0), 0);
+  const kpiRevEl = document.getElementById("kpiRevenue");
+  if (kpiRevEl) {
+    kpiRevEl.innerHTML = hasRevenue
+      ? new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(revenue) + '<span class="unit">€</span>'
+      : '<span class="unit" style="font-size:16px;">n/d</span>';
+  }
+  const kpiRevTrend = document.getElementById("kpiRevenueTrend");
+  if (kpiRevTrend) {
+    const valorised = arr.filter(c => c.prixCampagne != null || c.prixBoost != null).length;
+    kpiRevTrend.textContent = hasRevenue
+      ? valorised + " campagne" + (valorised > 1 ? "s" : "") + " valorisée" + (valorised > 1 ? "s" : "")
+      : "données non renseignées dans l'Excel";
+  }
+
+  document.getElementById("resultsCount").textContent =
+    arr.length + " campagne" + (arr.length > 1 ? "s" : "") + " affichée" + (arr.length > 1 ? "s" : "");
+}
+
+// ============ TABLE ============
+function renderTable() {
+  const body = document.getElementById("clientsTableBody");
+  body.innerHTML = "";
+
+  if (STATE.clientsAffiches.length === 0) {
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:32px; color:var(--gray-400); font-style:italic;">Aucun rapport ne correspond aux filtres.</td></tr>';
+  }
+
+  STATE.clientsAffiches.forEach(c => {
+    const tr = document.createElement("tr");
+    if (STATE.selectedId === c.id) tr.classList.add("selected");
+    tr.dataset.id = c.id;
+
+    const boostBadge = c.boost
+      ? '<span class="boost-badge" title="Media Boost actif">YES</span>'
+      : '<span class="boost-badge no" title="Pas de Media Boost">NO</span>';
+
+    const pickupsCell = c.pickups != null
+      ? fmtNum(c.pickups)
+      : '<span class="nd-cell">n/d</span>';
+    const boostCell = c.mediaBoost != null && c.mediaBoost > 0
+      ? fmtNum(c.mediaBoost)
+      : (c.boost ? '<span class="nd-cell">0</span>' : '<span class="nd-cell">—</span>');
+    const totalCell = c.totalPickups != null
+      ? '<strong>' + fmtNum(c.totalPickups) + '</strong>'
+      : '<span class="nd-cell">n/d</span>';
+
+    const region = c.regionAFP || c.regionDDD || "";
+    tr.innerHTML = `
+      <td class="client-name-cell">
+        ${escapeHtml(c.nom)}
+        <div class="client-title">${escapeHtml(c.titreCampagne || "")}</div>
+      </td>
+      <td>${fmtDate(c.datePublication)}</td>
+      <td><span class="region-tag ${region.toLowerCase()}">${region}</span></td>
+      <td>${boostBadge}</td>
+      <td class="num-cell">${fmtPct(c.tauxOuverture)}</td>
+      <td class="num-cell">${fmtPct(c.tauxClic)}</td>
+      <td class="num-cell">${fmtNum(c.vuesUniques)}</td>
+      <td class="num-cell">${pickupsCell}</td>
+      <td class="num-cell">${boostCell}</td>
+      <td class="num-cell">${totalCell}</td>
+    `;
+    tr.addEventListener("click", () => openDetail(c.id));
+    body.appendChild(tr);
+  });
+
+  // Update sort indicators
+  document.querySelectorAll(".clients-table thead th").forEach(th => {
+    th.classList.remove("sorted-asc", "sorted-desc");
+    const ind = th.querySelector(".sort-ind");
+    if (ind) ind.textContent = "";
+    if (th.dataset.col === STATE.sortBy) {
+      th.classList.add(STATE.sortDir === "asc" ? "sorted-asc" : "sorted-desc");
+      if (ind) ind.textContent = STATE.sortDir === "asc" ? "▲" : "▼";
+    }
+  });
+}
+
+// ============ DETAIL PANEL ============
+function openDetail(id) {
+  const c = STATE.donnees.clients.find(x => x.id === id);
+  if (!c) return;
+  STATE.selectedId = id;
+  renderTable();
+
+  const region = c.regionAFP || c.regionDDD || "";
+  const boostPill = c.boost
+    ? '<span class="boost-badge boost-badge-lg" style="margin-left:10px; vertical-align:middle;">BOOST</span>'
+    : '';
+  document.getElementById("detailTitle").innerHTML = escapeHtml(c.nom) + boostPill;
+  document.getElementById("detailSubtitle").textContent =
+    (c.titreCampagne || "") + " · " + fmtDate(c.datePublication) + " · " + region;
+
+  const body = document.getElementById("detailBody");
+
+  // Scoring summary
+  let html = `<div class="detail-section">
+    <h4>Performance globale</h4>
+    <div class="detail-kpi-grid">
+      <div class="detail-kpi"><div class="detail-kpi-label">Visibility score</div><div class="detail-kpi-value">${c.visibilityScore || 0}<span class="unit" style="font-size:13px;color:var(--gray-400);"> / 100</span></div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Engagement score</div><div class="detail-kpi-value">${c.engagementScore || 0}<span class="unit" style="font-size:13px;color:var(--gray-400);"> / 100</span></div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Media reach score</div><div class="detail-kpi-value">${c.mediaReachScore || 0}<span class="unit" style="font-size:13px;color:var(--gray-400);"> / 100</span></div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Total Pick-ups</div><div class="detail-kpi-value">${fmtNum(c.totalPickups)}</div></div>
+    </div>
+  </div>`;
+
+  html += `<div class="detail-section">
+    <h4>Indicateurs clés</h4>
+    <div class="detail-kpi-grid">
+      <div class="detail-kpi"><div class="detail-kpi-label">Emails ciblés</div><div class="detail-kpi-value">${fmtNum(c.emailsCibles)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Taux d'ouverture</div><div class="detail-kpi-value">${fmtPct(c.tauxOuverture)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Taux de clic</div><div class="detail-kpi-value">${fmtPct(c.tauxClic)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Views</div><div class="detail-kpi-value">${fmtNum(c.vuesUniques)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Téléch. texte</div><div class="detail-kpi-value">${fmtNum(c.telechargementsTexte)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Téléch. photo</div><div class="detail-kpi-value">${fmtNum(c.telechargementsPhoto)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Pick-ups</div><div class="detail-kpi-value">${fmtNum(c.pickups)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Media Boost</div><div class="detail-kpi-value">${fmtNum(c.mediaBoost)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Unique media outlets</div><div class="detail-kpi-value">${fmtNum(c.uniqueMediaOutlets)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Pressrooms AFP</div><div class="detail-kpi-value">${fmtNum(c.pressroomsAFP)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">AFP feeds</div><div class="detail-kpi-value">${fmtNum(c.feedsAFP)}</div></div>
+      <div class="detail-kpi"><div class="detail-kpi-label">Région AFP</div><div class="detail-kpi-value" style="font-size:18px;"><span class="region-tag ${region.toLowerCase()}">${region}</span></div></div>
+    </div>
+  </div>`;
+
+  // Facturation
+  const hasPrix = c.prixCampagne != null || c.prixBoost != null;
+  const fmtEur = (n) => n != null
+    ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n)
+    : "—";
+  html += `<div class="detail-section">
+    <h4>Facturation</h4>`;
+  if (hasPrix) {
+    const total = (c.prixCampagne || 0) + (c.prixBoost || 0);
+    html += `<div class="billing-grid">
+      <div class="billing-row">
+        <span class="billing-label">Campagne</span>
+        <span class="billing-amount">${fmtEur(c.prixCampagne)}</span>
+      </div>
+      ${c.boost ? `<div class="billing-row">
+        <span class="billing-label">Option BOOST</span>
+        <span class="billing-amount">${fmtEur(c.prixBoost)}</span>
+      </div>` : ""}
+      <div class="billing-row billing-total">
+        <span class="billing-label">Total</span>
+        <span class="billing-amount">${fmtEur(total)}</span>
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="empty-state" style="text-align:left;">Prix non renseignés — à compléter dans le fichier Excel source (colonnes <code>prixCampagne</code> / <code>prixBoost</code>).</div>`;
+  }
+  html += `</div>`;
+
+  // Timeline
+  html += `<div class="detail-section">
+    <h4>Chronologie</h4>`;
+  if (c.pics && c.pics.length > 0) {
+    html += `<div class="timeline">`;
+    c.pics.forEach(p => {
+      html += `<div class="timeline-item">
+        <div class="timeline-date">${fmtDate(p.date)}</div>
+        <div class="timeline-event">${p.evenement}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  } else {
+    html += '<div class="empty-state">Chronologie non détaillée dans ce rapport.</div>';
+  }
+  html += `</div>`;
+
+  // Top medias
+  html += `<div class="detail-section"><h4>Top médias repreneurs</h4>`;
+  if (c.topMedias && c.topMedias.length > 0) {
+    html += `<ul class="media-list">`;
+    c.topMedias.slice(0, 10).forEach(m => {
+      html += `<li>
+        <span class="media-name">${m.nom}</span>
+        <span class="media-meta">${m.pays || ""}${m.reach ? " · " + fmtNum(m.reach) + " vues" : ""}</span>
+      </li>`;
+    });
+    html += `</ul>`;
+  } else {
+    html += '<div class="empty-state">Liste détaillée non extraite, voir le rapport source.</div>';
+  }
+  html += `</div>`;
+
+  // Geographic
+  html += `<div class="detail-section"><h4>Répartition géographique</h4>`;
+  if (c.topPays && Object.keys(c.topPays).length > 0) {
+    const entries = Object.entries(c.topPays).sort((a, b) => b[1] - a[1]);
+    const max = Math.max(...entries.map(e => e[1]));
+    entries.forEach(([k, v]) => {
+      const pct = (v / max) * 100;
+      html += `<div class="bar-row">
+        <span class="bar-label">${k}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+        <span class="bar-value">${fmtNum(v)}</span>
+      </div>`;
+    });
+  } else {
+    html += '<div class="empty-state">Répartition géographique non détaillée dans ce rapport.</div>';
+  }
+  html += `</div>`;
+
+  // Type de contenu
+  html += `<div class="detail-section"><h4>Type de contenu</h4>`;
+  if (c.typeContenu && c.typeContenu.length > 0) {
+    html += `<div style="display:flex; gap:6px; flex-wrap:wrap;">`;
+    c.typeContenu.forEach(t => {
+      html += `<span class="region-tag">${t}</span>`;
+    });
+    html += `</div>`;
+  } else {
+    html += '<div class="empty-state">Type non précisé.</div>';
+  }
+  html += `</div>`;
+
+  // Thématiques
+  html += `<div class="detail-section"><h4>Thématiques / angles</h4>`;
+  if (c.thematiques && c.thematiques.length > 0) {
+    html += `<div style="display:flex; gap:6px; flex-wrap:wrap;">`;
+    c.thematiques.forEach(t => {
+      html += `<span class="region-tag">${t}</span>`;
+    });
+    html += `</div>`;
+  } else {
+    html += '<div class="empty-state">Aucune thématique renseignée.</div>';
+  }
+  html += `</div>`;
+
+  // Langues
+  html += `<div class="detail-section"><h4>Langues de diffusion</h4>`;
+  if (c.langues && c.langues.length > 0) {
+    html += `<div style="display:flex; gap:6px; flex-wrap:wrap;">`;
+    c.langues.forEach(l => html += `<span class="region-tag">${l}</span>`);
+    html += `</div>`;
+  } else {
+    html += '<div class="empty-state">Langues non renseignées.</div>';
+  }
+  html += `</div>`;
+
+  // Note de complétude
+  if (c.complet === false) {
+    html += `<div class="detail-section"><div class="empty-state" style="text-align:left;">
+      Rapport extrait partiellement. Les détails (top médias, géographie, tonalité) ne sont pas tous présents dans la version PDF source.
+      Pour enrichir cette fiche, modifier directement l'objet DONNEES_INITIALES ou utiliser le bouton "Ajouter un rapport".
+    </div></div>`;
+  }
+
+  body.innerHTML = html;
+
+  document.getElementById("detailPanel").classList.add("open");
+  document.getElementById("detailPanel").setAttribute("aria-hidden", "false");
+  document.getElementById("detailOverlay").classList.add("open");
+}
+
+function closeDetail() {
+  STATE.selectedId = null;
+  document.getElementById("detailPanel").classList.remove("open");
+  document.getElementById("detailPanel").setAttribute("aria-hidden", "true");
+  document.getElementById("detailOverlay").classList.remove("open");
+  renderTable();
+}
+
+// ============ CHARTS ============
+function renderMonthlyChart(metric = "vues") {
+  const ctx = document.getElementById("monthlyChart");
+  const arr = STATE.clientsAffiches;
+
+  // Aggregate by month
+  const buckets = {};
+  arr.forEach(c => {
+    const k = monthKey(c.datePublication);
+    if (!k) return;
+    if (!buckets[k]) buckets[k] = { vues: 0, emails: 0, campagnes: 0, label: monthLabel(c.datePublication) };
+    buckets[k].vues += c.vuesUniques || 0;
+    buckets[k].emails += c.emailsCibles || 0;
+    buckets[k].campagnes += 1;
+  });
+
+  const keys = Object.keys(buckets).sort();
+  const labels = keys.map(k => buckets[k].label);
+  const data = keys.map(k => buckets[k][metric]);
+
+  const metricLabels = {
+    vues: "Vues uniques cumulées",
+    emails: "Emails ciblés cumulés",
+    campagnes: "Nombre de campagnes"
+  };
+
+  if (STATE.charts.monthly) STATE.charts.monthly.destroy();
+
+  STATE.charts.monthly = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: metricLabels[metric],
+        data: data,
+        borderColor: "#325AFF",
+        backgroundColor: "rgba(50, 90, 255, 0.08)",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: "#325AFF",
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1a1a1a",
+          padding: 12,
+          titleFont: { family: "Inter", weight: "600" },
+          bodyFont: { family: "Inter" },
+          callbacks: {
+            label: (ctx) => metricLabels[metric] + ": " + new Intl.NumberFormat("fr-FR").format(ctx.parsed.y)
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: "#71717a", font: { family: "Inter", size: 11 } }
+        },
+        y: {
+          grid: { color: "#f0f0f2" },
+          border: { display: false },
+          ticks: {
+            color: "#71717a",
+            font: { family: "Inter", size: 11 },
+            callback: (v) => new Intl.NumberFormat("fr-FR").format(v)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderCompChart(metric = "vues") {
+  const ctx = document.getElementById("compChart");
+  const arr = [...STATE.clientsAffiches];
+
+  // Map metric to field
+  const metricMap = {
+    vues: "vuesUniques",
+    totalVis: "totalPickups",
+    organic: "pickups",
+    partnerships: "mediaBoost",
+    tauxOuverture: "tauxOuverture",
+    tauxClic: "tauxClic"
+  };
+  const labels = {
+    vues: "Views",
+    totalVis: "Total Pick-ups",
+    organic: "Pick-ups",
+    partnerships: "Media Boost",
+    tauxOuverture: "Taux d'ouverture (%)",
+    tauxClic: "Taux de clic (%)"
+  };
+
+  const field = metricMap[metric];
+  const sorted = arr
+    .filter(c => c[field] != null)
+    .sort((a, b) => b[field] - a[field]);
+
+  if (STATE.charts.comp) STATE.charts.comp.destroy();
+
+  STATE.charts.comp = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: sorted.map(c => c.nom + (c.titreCampagne ? " · " + c.titreCampagne.slice(0, 32) + (c.titreCampagne.length > 32 ? "..." : "") : "")),
+      datasets: [{
+        label: labels[metric],
+        data: sorted.map(c => c[field]),
+        backgroundColor: "#325AFF",
+        borderRadius: 4,
+        barThickness: 18
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1a1a1a",
+          padding: 12,
+          titleFont: { family: "Inter", weight: "600" },
+          callbacks: {
+            label: (ctx) => labels[metric] + ": " + (metric.includes("taux") ? ctx.parsed.x.toFixed(2).replace(".", ",") + " %" : new Intl.NumberFormat("fr-FR").format(ctx.parsed.x))
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "#f0f0f2" },
+          border: { display: false },
+          ticks: {
+            color: "#71717a",
+            font: { family: "Inter", size: 11 },
+            callback: (v) => metric.includes("taux") ? v + " %" : new Intl.NumberFormat("fr-FR").format(v)
+          }
+        },
+        y: {
+          grid: { display: false },
+          ticks: {
+            color: "#52525b",
+            font: { family: "Inter", size: 11 }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ============ EXECUTIVE PERFORMANCE PANEL ============
+function renderExecutivePanel() {
+  const arr = STATE.clientsAffiches;
+  const metricsEl = document.getElementById("execMetrics");
+  const rankEl = document.getElementById("execRankingList");
+
+  if (arr.length === 0) {
+    metricsEl.innerHTML = '<div class="exec-metric" style="grid-column:1/-1;"><div class="exec-metric-label">Aucune donnée</div><div class="exec-metric-sub">Aucune campagne ne correspond aux filtres.</div></div>';
+    rankEl.innerHTML = '';
+    return;
+  }
+
+  // ===== HERO METRICS =====
+  // 1. Global visibility score (moyenne pondérée)
+  const avgVisibility = Math.round(arr.reduce((s, c) => s + (c.visibilityScore || 0), 0) / arr.length);
+
+  // 2. Top performing campaign
+  const topVis = [...arr].sort((a, b) => (b.visibilityScore || 0) - (a.visibilityScore || 0))[0];
+
+  // 3. Top region (par nb campagnes ou somme visibility)
+  const regionStats = {};
+  arr.forEach(c => {
+    if (!regionStats[c.regionAFP || c.regionDDD]) regionStats[c.regionAFP || c.regionDDD] = { count: 0, sumVis: 0 };
+    regionStats[c.regionAFP || c.regionDDD].count++;
+    regionStats[c.regionAFP || c.regionDDD].sumVis += (c.totalPickups || 0);
+  });
+  const topRegion = Object.entries(regionStats)
+    .sort((a, b) => b[1].count - a[1].count || b[1].sumVis - a[1].sumVis)[0];
+
+  // 4. Top engagement
+  const topEngagement = [...arr].sort((a, b) => (b.engagementScore || 0) - (a.engagementScore || 0))[0];
+
+  metricsEl.innerHTML = `
+    <div class="exec-metric hero">
+      <div class="exec-metric-label">Global Visibility Score</div>
+      <div class="exec-metric-value">${avgVisibility}<span class="exec-metric-suffix">/100</span></div>
+      <div class="exec-metric-sub">Moyenne pondérée · ${arr.length} campagne${arr.length > 1 ? 's' : ''}</div>
+      <div class="exec-score-bar"><div class="exec-score-bar-fill" style="width:${avgVisibility}%"></div></div>
+    </div>
+    <div class="exec-metric">
+      <div class="exec-metric-label">Top Performing Campaign</div>
+      <div class="exec-metric-value" style="font-size:18px; margin-top:4px;">${topVis ? escapeHtml(topVis.nom) : '—'}</div>
+      <div class="exec-metric-sub">${topVis ? escapeHtml((topVis.titreCampagne || '').slice(0, 50)) + (topVis.titreCampagne && topVis.titreCampagne.length > 50 ? '…' : '') : ''}</div>
+      <div class="exec-score-bar"><div class="exec-score-bar-fill" style="width:${topVis ? topVis.visibilityScore : 0}%"></div></div>
+    </div>
+    <div class="exec-metric">
+      <div class="exec-metric-label">Top Region</div>
+      <div class="exec-metric-value">${topRegion ? topRegion[0] : '—'}</div>
+      <div class="exec-metric-sub">${topRegion ? topRegion[1].count + ' campagne' + (topRegion[1].count > 1 ? 's' : '') : ''}</div>
+    </div>
+    <div class="exec-metric">
+      <div class="exec-metric-label">Top Engagement</div>
+      <div class="exec-metric-value">${topEngagement ? (topEngagement.tauxOuverture || 0).toFixed(0) + '%' : '—'}</div>
+      <div class="exec-metric-sub">${topEngagement ? escapeHtml(topEngagement.nom) + ' · ouverture' : ''}</div>
+    </div>
+  `;
+
+  // ===== RANKING =====
+  renderExecRanking();
+}
+
+function renderExecRanking() {
+  const arr = STATE.clientsAffiches;
+  const rankEl = document.getElementById("execRankingList");
+  const metric = STATE.execRankMetric;
+
+  const scoreField = metric === "engagement" ? "engagementScore"
+    : metric === "reach" ? "mediaReachScore"
+    : "visibilityScore";
+  const label = metric === "engagement" ? "Engagement"
+    : metric === "reach" ? "Media reach"
+    : "Visibility";
+
+  const sorted = [...arr]
+    .filter(c => c[scoreField] != null)
+    .sort((a, b) => (b[scoreField] || 0) - (a[scoreField] || 0))
+    .slice(0, 8);
+
+  if (sorted.length === 0) {
+    rankEl.innerHTML = '<div style="padding:20px; color:rgba(255,255,255,0.5); text-align:center;">Aucune donnée à afficher.</div>';
+    return;
+  }
+
+  let html = '';
+  sorted.forEach((c, idx) => {
+    const score = c[scoreField] || 0;
+    const isTop3 = idx < 3;
+    const boost = c.boost ? '<span class="exec-rank-tag">BOOST</span>' : '';
+    const topTag = idx === 0 ? '<span class="exec-rank-tag" style="background:rgba(255,215,0,0.18); color:#ffd700;">TOP</span>' : '';
+
+    html += `<div class="exec-rank-row" data-id="${c.id}">
+      <div class="exec-rank-position">#${(idx + 1).toString().padStart(2, '0')}</div>
+      <div class="exec-rank-info">
+        <div class="exec-rank-name">${escapeHtml(c.nom)} ${boost} ${topTag}</div>
+        <div class="exec-rank-meta">${escapeHtml((c.titreCampagne || '').slice(0, 70))}${c.titreCampagne && c.titreCampagne.length > 70 ? '…' : ''} · ${c.regionAFP || c.regionDDD}</div>
+      </div>
+      <div class="exec-rank-score">
+        <div class="exec-rank-score-bar"><div class="exec-rank-score-fill" style="width:${score}%"></div></div>
+        <div class="exec-rank-score-value">${score}</div>
+      </div>
+    </div>`;
+  });
+
+  rankEl.innerHTML = html;
+
+  // Make rows clickable → open detail
+  rankEl.querySelectorAll('.exec-rank-row').forEach(row => {
+    row.addEventListener('click', () => openDetail(row.dataset.id));
+  });
+
+  // Update tabs
+  document.querySelectorAll('#execRankTabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.rank === metric);
+  });
+
+  // Update header label
+  const metaEl = document.getElementById('execPanelMeta');
+  if (metaEl) metaEl.textContent = 'Ranked by ' + label.toLowerCase() + ' · ' + sorted.length + ' campaigns';
+}
+
+// HTML escape utility
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ============ POPULATE FILTERS ============
+function populateRegionFilter() {
+  const set = new Set(DONNEES_INITIALES.clients.map(c => c.regionAFP || c.regionDDD));
+  STATE.donnees.clients.forEach(c => set.add(c.regionAFP || c.regionDDD));
+  const regions = [...set].filter(Boolean).sort();
+
+  // Hidden select (compatibilité JS existant)
+  const sel = document.getElementById("filterRegion");
+  if (sel) {
+    sel.innerHTML = '<option value="all">Toutes</option>';
+    regions.forEach(r => {
+      const o = document.createElement("option");
+      o.value = r; o.textContent = r;
+      sel.appendChild(o);
+    });
+  }
+
+  // Chips de région
+  const chipsEl = document.getElementById("regionChips");
+  if (!chipsEl) return;
+  chipsEl.innerHTML = '<button class="filter-chip active" data-region="all">Toutes</button>';
+  regions.forEach(r => {
+    const btn = document.createElement("button");
+    btn.className = "filter-chip";
+    btn.dataset.region = r;
+    btn.textContent = r;
+    chipsEl.appendChild(btn);
+  });
+  chipsEl.querySelectorAll(".filter-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      chipsEl.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+      chip.classList.add("active");
+      STATE.filters.region = chip.dataset.region;
+      if (sel) sel.value = chip.dataset.region;
+      renderAll();
+    });
+  });
+}
+
+// ============ MAIN RENDER ============
+function renderAll() {
+  applyFilters();
+  renderKPIs();
+  renderTable();
+  renderMonthlyChart(STATE.monthlyMetric || "vues");
+  renderCompChart(STATE.compMetric || "vues");
+  renderExecutivePanel();
+}
+
+// ============ EVENT BINDINGS ============
+function bindEvents() {
+  // Filters
+  ["filterPeriod", "filterRegion", "filterContent"].forEach(id => {
+    document.getElementById(id).addEventListener("change", (e) => {
+      const key = id.replace("filter", "").toLowerCase();
+      STATE.filters[key] = e.target.value;
+      renderAll();
+    });
+  });
+  document.getElementById("filterClient").addEventListener("input", (e) => {
+    STATE.filters.client = e.target.value;
+    renderAll();
+  });
+  document.getElementById("filterReset").addEventListener("click", () => {
+    STATE.filters = { period: "all", region: "all", content: "all", client: "" };
+    document.getElementById("filterPeriod").value = "all";
+    const filterRegionEl = document.getElementById("filterRegion");
+    if (filterRegionEl) filterRegionEl.value = "all";
+    document.getElementById("filterContent").value = "all";
+    document.getElementById("filterClient").value = "";
+    document.querySelectorAll("#regionChips .filter-chip").forEach(c =>
+      c.classList.toggle("active", c.dataset.region === "all")
+    );
+    renderAll();
+  });
+
+  // Sorting
+  document.querySelectorAll(".clients-table thead th").forEach(th => {
+    th.addEventListener("click", () => {
+      const col = th.dataset.col;
+      if (!col) return;
+      if (STATE.sortBy === col) STATE.sortDir = STATE.sortDir === "asc" ? "desc" : "asc";
+      else { STATE.sortBy = col; STATE.sortDir = "desc"; }
+      renderAll();
+    });
+  });
+
+  // Chart toggles
+  document.querySelectorAll("#monthlyToggle button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll("#monthlyToggle button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      STATE.monthlyMetric = b.dataset.metric;
+      renderMonthlyChart(b.dataset.metric);
+    });
+  });
+  document.querySelectorAll("#compToggle button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll("#compToggle button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      STATE.compMetric = b.dataset.metric;
+      renderCompChart(b.dataset.metric);
+    });
+  });
+
+  // Detail panel close
+  document.getElementById("detailClose").addEventListener("click", closeDetail);
+  document.getElementById("detailOverlay").addEventListener("click", closeDetail);
+
+  // Executive panel ranking tabs
+  document.querySelectorAll("#execRankTabs button").forEach(b => {
+    b.addEventListener("click", () => {
+      STATE.execRankMetric = b.dataset.rank;
+      renderExecRanking();
+    });
+  });
+
+  // Print
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+  // Management
+  document.getElementById("addReportBtn").addEventListener("click", () => {
+    document.getElementById("addModal").classList.add("open");
+  });
+  document.querySelectorAll("[data-close]").forEach(b => {
+    b.addEventListener("click", () => {
+      document.getElementById(b.dataset.close).classList.remove("open");
+    });
+  });
+
+  document.getElementById("saveReportBtn").addEventListener("click", saveNewReport);
+  document.getElementById("exportJsonBtn").addEventListener("click", exportJSON);
+  document.getElementById("importJsonBtn").addEventListener("click", () => document.getElementById("importFile").click());
+  document.getElementById("importFile").addEventListener("change", importJSON);
+  document.getElementById("importExcelBtn").addEventListener("click", () => document.getElementById("importExcelFile").click());
+  document.getElementById("syncOneDriveBtn").addEventListener("click", openOneDriveModal);
+  document.getElementById("oneDriveSyncBtn").addEventListener("click", syncFromOneDrive);
+  document.getElementById("importExcelFile").addEventListener("change", importExcel);
+  document.getElementById("resetLocalBtn").addEventListener("click", () => {
+    if (confirm("Réinitialiser le dashboard aux données d'origine ? Les rapports ajoutés localement seront perdus.")) {
+      localStorage.removeItem("ddd_dashboard_data");
+      loadData();
+      populateRegionFilter();
+      renderAll();
+      showNotif("Données restaurées");
+    }
+  });
+
+  // AI
+  document.getElementById("apiKey").addEventListener("input", (e) => {
+    sessionStorage.setItem("ddd_api_key", e.target.value);
+    updateKeyStatus();
+  });
+  document.getElementById("aiSubmit").addEventListener("click", submitAI);
+  document.getElementById("aiQuestion").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitAI();
+  });
+  document.querySelectorAll(".ai-suggestion").forEach(b => {
+    b.addEventListener("click", () => {
+      document.getElementById("aiQuestion").value = b.textContent;
+      submitAI();
+    });
+  });
+
+  // Restore API key from sessionStorage
+  const sk = sessionStorage.getItem("ddd_api_key");
+  if (sk) {
+    document.getElementById("apiKey").value = sk;
+    updateKeyStatus();
+  }
+
+  // Header gen date
+  const today = new Date();
+  document.getElementById("genInfo").textContent =
+    today.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+
+  // Hamburger menu (mobile)
+  const sidebar = document.getElementById("appSidebar");
+  const backdrop = document.getElementById("sidebarBackdrop");
+  const hamburger = document.getElementById("hamburgerBtn");
+  function closeSidebar() {
+    sidebar.classList.remove("mobile-open");
+    backdrop.classList.remove("open");
+  }
+  if (hamburger) {
+    hamburger.addEventListener("click", () => {
+      sidebar.classList.toggle("mobile-open");
+      backdrop.classList.toggle("open");
+    });
+  }
+  if (backdrop) backdrop.addEventListener("click", closeSidebar);
+  document.querySelectorAll(".nav-item[data-section]").forEach(item => {
+    item.addEventListener("click", () => {
+      if (window.innerWidth <= 1024) closeSidebar();
+    });
+  });
+
+  // Sidebar nav — active state on scroll
+  const sectionIds = ["overview", "comparative", "clientsSection", "management", "aiSection"];
+  const sectionTitles = {
+    overview: "Vue d'ensemble",
+    comparative: "Performance",
+    clientsSection: "Campagnes",
+    management: "Données",
+    aiSection: "Requêtes IA"
+  };
+  const navItems = document.querySelectorAll(".nav-item[data-section]");
+  const headerTitle = document.getElementById("headerTitle");
+
+  function updateActiveNav() {
+    let current = sectionIds[0];
+    sectionIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.getBoundingClientRect().top <= 80) current = id;
+    });
+    navItems.forEach(item => item.classList.toggle("active", item.dataset.section === current));
+    if (headerTitle) headerTitle.textContent = sectionTitles[current] || "";
+  }
+
+  window.addEventListener("scroll", updateActiveNav, { passive: true });
+  updateActiveNav();
+}
+
+function updateKeyStatus() {
+  const v = document.getElementById("apiKey").value;
+  const st = document.getElementById("keyStatus");
+  if (v && v.startsWith("sk-ant-")) {
+    st.textContent = "Clé chargée en session";
+    st.classList.add("ok");
+  } else if (v) {
+    st.textContent = "Format inattendu";
+    st.classList.remove("ok");
+  } else {
+    st.textContent = "Non renseignée";
+    st.classList.remove("ok");
+  }
+}
+
+// ============ ADD REPORT ============
+function saveNewReport() {
+  const get = (id) => document.getElementById(id).value.trim();
+  const num = (id) => { const v = get(id); return v === "" ? null : Number(v); };
+  const list = (id) => { const v = get(id); return v ? v.split(",").map(s => s.trim()).filter(Boolean) : []; };
+
+  const nom = get("fNom");
+  if (!nom) { alert("Le nom du client est obligatoire."); return; }
+
+  const newId = nom.toLowerCase().replace(/[^a-z0-9]+/g, "_") + "_" + Date.now();
+  const boostVal = get("fBoost");
+  const newReport = {
+    id: newId,
+    nom: nom,
+    titreCampagne: get("fTitre"),
+    regionAFP: get("fRegion") || "FR",
+    datePublication: get("fDatePub") || null,
+    dateRapport: get("fDateRap") || null,
+    formats: list("fTypes"),
+    langues: list("fLangues"),
+    typeContenu: list("fTypes"),
+    emailsCibles: num("fEmails"),
+    tauxOuverture: num("fOuverture"),
+    tauxClic: num("fClic"),
+    vuesUniques: num("fVues"),
+    telechargementsTexte: num("fDlText"),
+    telechargementsPhoto: num("fDlPhoto"),
+    pickups: num("fPickups"),
+    pickups: num("fOrganic"),
+    mediaBoost: num("fPartnerships"),
+    boost: boostVal === "yes" ? true : (boostVal === "no" ? false : undefined),
+    publicationsWeb: null,
+    uniqueMediaOutlets: num("fOutlets"),
+    pressroomsAFP: num("fPressrooms"),
+    feedsAFP: num("fFeeds"),
+    topPays: null,
+    topMedias: list("fMedias").map(m => ({ nom: m, reach: null })),
+    thematiques: list("fThemes"),
+    tonalite: get("fTonalite") || null,
+    pics: get("fDatePub") ? [{ date: get("fDatePub"), evenement: "Date de publication initiale" }] : [],
+    complet: false
+  };
+
+  // Normaliser avant de pousser pour que tous les scores et champs dérivés soient calculés
+  STATE.donnees.clients.push(normalizeClient(newReport));
+  persistData();
+  populateRegionFilter();
+  renderAll();
+  document.getElementById("addModal").classList.remove("open");
+
+  // Reset form
+  ["fNom", "fTitre", "fLangues", "fEmails", "fOuverture", "fClic", "fVues", "fDlText",
+   "fDlPhoto", "fPickups", "fOrganic", "fPartnerships", "fOutlets", "fFeeds",
+   "fPressrooms", "fTypes", "fThemes", "fMedias", "fDatePub", "fDateRap"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const boostSel = document.getElementById("fBoost");
+  if (boostSel) boostSel.value = "";
+
+  showNotif("Rapport ajouté et sauvegardé localement");
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(STATE.donnees, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "dashboard-visibilite-ddd_" + new Date().toISOString().slice(0, 10) + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+  showNotif("Export JSON téléchargé");
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.clients || !Array.isArray(data.clients)) throw new Error("Format invalide");
+      STATE.donnees = data;
+      normalizeAllClients();
+      persistData();
+      populateRegionFilter();
+      renderAll();
+      showNotif("Données importées (" + data.clients.length + " rapports)");
+    } catch (err) {
+      alert("Erreur lors de l'import : " + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+}
+
+// ============ EXCEL IMPORT ============
+// Lit un fichier .xlsx, .xls ou .csv et remplace les données du dashboard.
+// Le fichier Excel devient la source de vérité.
+//
+// Colonnes attendues (insensibles à la casse) :
+//   id, nom, titreCampagne, regionDDD, datePublication, dateRapport,
+//   boost (YES/NO/TRUE/FALSE/1/0), organicPickups, mediaPartnerships,
+//   emailsCibles, tauxOuverture, tauxClic, vuesUniques,
+//   telechargementsTexte, telechargementsPhoto, uniqueMediaOutlets,
+//   pressroomsAFP, feedsAFP, langues (CSV "EN,FR"), typeContenu (CSV),
+//   thematiques (CSV), tonalite, complet
+//
+// Les colonnes manquantes sont ignorées (valeur null).
+function importExcel(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (typeof XLSX === "undefined") {
+    alert("SheetJS (XLSX) n'est pas chargé. Vérifiez votre connexion internet.");
+    e.target.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = new Uint8Array(ev.target.result);
+      const wb = XLSX.read(data, { type: "array", cellDates: true });
+
+      // Chercher la feuille "DONNEES" en priorité, sinon prendre la première
+      const targetSheet = wb.SheetNames.find(n => n.toUpperCase() === "DONNEES") || wb.SheetNames[0];
+      const ws = wb.Sheets[targetSheet];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false });
+
+      if (rows.length === 0) throw new Error("La feuille \"" + targetSheet + "\" ne contient aucune ligne de données.");
+
+      // Debug : afficher les colonnes détectées dans la console
+      const detectedCols = Object.keys(rows[0]);
+      console.log("[AFP DDD] Feuille :", targetSheet, "| Colonnes détectées :", detectedCols);
+
+      const clients = rows.map((row, idx) => parseExcelRow(row, idx)).filter(Boolean);
+
+      if (clients.length === 0) {
+        // Construire un message d'erreur utile avec les colonnes trouvées
+        const colsFound = detectedCols.join(", ");
+        const colsNorm = detectedCols.map(normKey).join(", ");
+        throw new Error(
+          "Aucun client reconnu dans la feuille " + targetSheet + ". " +
+          "Colonnes trouvées : " + colsFound + ". " +
+          "Le dashboard cherche une colonne nommée Client (ou Nom, nom, name). " +
+          "Vérifiez que la feuille DONNEES est en premier onglet et que les en-têtes sont en ligne 1."
+        );
+      }
+
+      STATE.donnees = {
+        genereeLe: new Date().toISOString().slice(0, 10),
+        sourceExcel: file.name + " (feuille: " + targetSheet + ")",
+        clients: clients
+      };
+      normalizeAllClients();
+      persistData();
+      populateRegionFilter();
+      renderAll();
+      showNotif("Import réussi — " + clients.length + " campagnes chargées depuis " + targetSheet);
+    } catch (err) {
+      console.error("[AFP DDD] Import Excel error:", err);
+      alert("Erreur d'import Excel : " + err.message);
+    }
+  };
+  reader.onerror = () => alert("Impossible de lire le fichier.");
+  reader.readAsArrayBuffer(file);
+  e.target.value = "";
+}
+
+// Convertit une ligne Excel en objet client.
+// Normalise les clés (lowercase, sans espaces) pour tolérer les variations.
+// Normalise une clé de colonne Excel pour la comparaison insensible
+function normKey(k) {
+  return String(k).trim().toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[éêë]/g, "e").replace(/[èê]/g, "e")
+    .replace(/[àâ]/g, "a").replace(/[ùû]/g, "u")
+    .replace(/[îï]/g, "i").replace(/[ôö]/g, "o")
+    .replace(/[ç]/g, "c")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function parseExcelRow(rawRow, idx) {
+  // Dictionnaire normalisé : clé normalisée -> valeur brute
+  const row = {};
+  Object.keys(rawRow).forEach(k => { row[normKey(k)] = rawRow[k]; });
+
+  const pick = (...keys) => {
+    for (const k of keys) {
+      const v = row[normKey(k)];
+      if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+    }
+    return null;
+  };
+
+  const num = (v) => {
+    if (v === null || v === undefined || String(v).trim() === "") return null;
+    let s = String(v).trim().replace(/\s/g, "").replace(/%$/, "");
+    if (s.includes(",") && !s.includes(".")) s = s.replace(",", ".");
+    const n = Number(s);
+    return isNaN(n) ? null : n;
+  };
+
+  const pct = (v) => {
+    const n = num(v);
+    if (n === null) return null;
+    // Excel stocke parfois les taux en décimal (0.476 = 47.6%)
+    return n <= 1 ? Math.round(n * 10000) / 100 : n;
+  };
+
+  const list = (v) => {
+    if (!v) return [];
+    return String(v).split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+  };
+
+  const bool = (v) => {
+    if (v === null || v === undefined || String(v).trim() === "") return null;
+    const s = String(v).trim().toLowerCase();
+    return ["yes", "y", "true", "1", "oui", "on"].includes(s);
+  };
+
+  const dateStr = (v) => {
+    if (!v) return null;
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    const s = String(v).trim();
+    const ddmm = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+    if (ddmm) {
+      const y = ddmm[3].length === 2 ? "20" + ddmm[3] : ddmm[3];
+      return y + "-" + ddmm[2].padStart(2, "0") + "-" + ddmm[1].padStart(2, "0");
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+  };
+
+  // Champ déclencheur : la ligne est ignorée si pas de nom client
+  const nom = pick(
+    "client", "nom", "name", "Client", "Nom",
+    "clientnom", "nomclient", "societe", "company", "entreprise"
+  );
+  if (!nom) return null;
+
+  const id = pick("id") || (normKey(String(nom)) + "_" + idx);
+  const boostVal = bool(pick("boost", "BOOST", "isboost"));
+
+  return {
+    id,
+    nom,
+    salesperson:          pick("salesperson", "commercial", "vendeur", "charge", "responsable"),
+    titreCampagne:        pick("titrecampagne", "titre", "campaign", "title", "titredelacampagne", "titrecommunique", "titrecampagne"),
+    regionAFP:            pick("regionafp", "region", "regionddd", "zonegeo", "zone") || "FR",
+    pays:                 pick("pays", "country"),
+    secteur:              pick("secteur", "sector", "industrie", "industry"),
+    datePublication:      dateStr(pick("datepublication", "datepub", "publishdate", "datecp", "date")),
+    dateRapport:          dateStr(pick("daterapport", "reportdate", "daterapportj10")),
+    prNumber:             pick("prnumber", "pr", "numero", "ref"),
+    langues:              list(pick("langues", "languages", "langue")),
+    typeContenu:          list(pick("typecontenu", "contenttype", "format", "formats")),
+    boost:                boostVal === null ? false : boostVal,
+    pickups:              num(pick(
+                            "pickupsorganiques", "pickuporganiques", "organicpickups",
+                            "pickupsorganiquesezyinsights", "pickupsezyinsights",
+                            "pickups", "organic", "retombees"
+                          )),
+    mediaBoost:           num(pick(
+                            "partenariatsmediasboost", "partenariatsmedias", "mediapartnerships",
+                            "mediaboost", "partnerships", "boostpickups", "publicationsweb",
+                            "mediabooost", "nbpublicationsboost"
+                          )),
+    vuesUniques:          num(pick("vuesuniques", "views", "uniqueviews", "vues")),
+    emailsCibles:         num(pick("emailscibles", "emailsciblesjournalistes", "emails", "targetedmails", "emailsenvoyes")),
+    tauxOuverture:        pct(pick("tauxouverture", "ouverture", "openrate", "tauxdouverture", "opening")),
+    tauxClic:             pct(pick("tauxclic", "clic", "clickrate", "tauxdeclic", "click")),
+    pressroomsAFP:        num(pick("pressroomsafp", "pressrooms", "pressroom", "nombrepressrooms", "pressroomstexte")),
+    feedsAFP:             num(pick("feedsafp", "feeds", "fluxphoto", "fluxphotomonde", "fluxphotolemonde")),
+    telechargementsTexte: num(pick("telechargementstext", "telechargementstexte", "downloadstext", "textdownloads", "telechargtexte")),
+    telechargementsPhoto: num(pick("telechargementsphoto", "downloadsphoto", "photodownloads", "telechargelphoto")),
+    uniqueMediaOutlets:   num(pick("uniquemediaoutlets", "outlets", "mediaoutlets", "mediasuniques")),
+    thematiques:          list(pick("thematiques", "themes", "topics", "thematique")),
+    tonalite:             pick("tonalite", "tonality", "sentiment", "tone"),
+    topPays:              null,
+    topMedias:            null,
+    pics:                 [],
+    complet:              bool(pick("complet", "complete")) || false
+  };
+}
+
+function showNotif(msg) {
+  const n = document.getElementById("notif");
+  n.textContent = msg;
+  n.classList.add("show");
+  setTimeout(() => n.classList.remove("show"), 2600);
+}
+
+// ============ ANTHROPIC API ============
+async function submitAI() {
+  const key = document.getElementById("apiKey").value.trim();
+  const q = document.getElementById("aiQuestion").value.trim();
+  const out = document.getElementById("aiResponse");
+
+  if (!key) {
+    out.textContent = "Veuillez coller votre clé API Anthropic ci-dessus avant d'envoyer une question.";
+    out.classList.remove("empty");
+    out.classList.add("error");
+    return;
+  }
+  if (!q) {
+    out.textContent = "Posez une question, par exemple : quel client a le mieux performé ce trimestre ?";
+    out.classList.remove("empty");
+    out.classList.add("error");
+    return;
+  }
+
+  out.classList.remove("empty", "error");
+  out.innerHTML = '<div class="ai-loading"><span></span><span></span><span></span></div>';
+
+  // Build compact dataset for context
+  const compact = {
+    genereeLe: STATE.donnees.genereeLe,
+    nbClients: STATE.donnees.clients.length,
+    clients: STATE.donnees.clients.map(c => ({
+      nom: c.nom,
+      titreCampagne: c.titreCampagne,
+      regionAFP: c.regionAFP || c.regionDDD,
+      datePublication: c.datePublication,
+      boost: c.boost,
+      emailsCibles: c.emailsCibles,
+      tauxOuverture: c.tauxOuverture,
+      tauxClic: c.tauxClic,
+      vuesUniques: c.vuesUniques,
+      telechargementsTexte: c.telechargementsTexte,
+      telechargementsPhoto: c.telechargementsPhoto,
+      pickups: c.pickups,
+      mediaBoost: c.mediaBoost,
+      totalPickups: c.totalPickups,
+      uniqueMediaOutlets: c.uniqueMediaOutlets,
+      pressroomsAFP: c.pressroomsAFP,
+      feedsAFP: c.feedsAFP,
+      visibilityScore: c.visibilityScore,
+      engagementScore: c.engagementScore,
+      mediaReachScore: c.mediaReachScore,
+      thematiques: c.thematiques,
+      tonalite: c.tonalite,
+      topMedias: c.topMedias ? c.topMedias.map(m => m.nom) : null,
+      langues: c.langues,
+      typeContenu: c.typeContenu
+    }))
+  };
+
+  const systemPrompt = `Tu es un analyste de visibilité presse pour l'équipe DDD (Distribution et Diffusion Digitale) de l'AFP. Tu réponds en français, de façon concise, professionnelle et factuelle. Tu te bases STRICTEMENT sur l'objet JSON de données fourni. Distingue toujours les retombées organiques (pickups) du Media Boost AFP (mediaBoost). Le champ totalPickups = pickups + mediaBoost. Les régions sont des régions AFP. Si une information n'est pas disponible (valeur null ou n/d), tu le dis clairement. Tu cites les noms de clients exactement comme ils apparaissent. Tu n'inventes aucun chiffre. Tu structures ta réponse en quelques phrases ou points courts.`;
+
+  const userMsg = `Voici les données de visibilité disponibles :\n\n\`\`\`json\n${JSON.stringify(compact, null, 2)}\n\`\`\`\n\nQuestion : ${q}`;
+
+  try {
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": key,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true"
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5",
+        max_tokens: 1500,
+        stream: true,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMsg }]
+      })
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      out.classList.add("error");
+      out.textContent = "Erreur API (" + resp.status + ") : " + txt;
+      return;
+    }
+
+    out.textContent = "";
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let fullText = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6);
+        if (payload === "[DONE]") continue;
+        try {
+          const evt = JSON.parse(payload);
+          if (evt.type === "content_block_delta" && evt.delta && evt.delta.text) {
+            fullText += evt.delta.text;
+            out.textContent = fullText;
+          }
+        } catch (e) {
+          // ignore parse errors on partial chunks
+        }
+      }
+    }
+  } catch (err) {
+    out.classList.add("error");
+    out.textContent = "Erreur réseau ou CORS : " + err.message + "\n\nNote : l'API Anthropic exige le header anthropic-dangerous-direct-browser-access. Vérifie la clé et la connexion.";
+  }
+}
+
+// ============ INIT ============
+function init() {
+  if (!checkSession()) return;   // bloqué jusqu'au login
+  bindEvents();
+  loadData();  // async — populateRegionFilter() et renderAll() sont appelés dans le .then()
+}
+
+document.addEventListener("DOMContentLoaded", init);
+
+// ============ ONEDRIVE SYNC ============
+
+function openOneDriveModal() {
+  const saved = localStorage.getItem("ddd_onedrive_url") || "";
+  document.getElementById("oneDriveUrl").value = saved;
+  document.getElementById("oneDriveSaveUrl").checked = !!saved;
+  document.getElementById("oneDriveStatus").textContent = "";
+  document.getElementById("oneDriveStatus").style.color = "var(--gray-500)";
+  document.getElementById("oneDriveModal").classList.add("open");
+}
+
+// Encode un lien de partage OneDrive en URL base64 pour l'API Graph/Shares
+// Ref: https://learn.microsoft.com/onedrive/developer/rest-api/api/shares_get
+function encodeShareUrl(shareUrl) {
+  // base64url sans padding
+  const b64 = btoa(shareUrl).replace(/=/g, "").replace(/\//g, "_").replace(/\+/g, "-");
+  return "u!" + b64;
+}
+
+// Résout un lien de partage OneDrive en URL de téléchargement binaire directe.
+// Stratégie :
+//  1. Lien 1drv.ms / onedrive.live.com  -> API Graph anonymous shares
+//  2. Lien SharePoint                   -> API Graph anonymous shares (même mécanisme)
+//  3. Fallback                          -> ?download=1 (peut échouer si CORS)
+async function resolveOneDriveDownloadUrl(shareUrl) {
+  // Pour les liens 1drv.ms, SharePoint et onedrive.live.com on passe par l'API
+  // Graph "shares" qui retourne un JSON avec un champ @microsoft.graph.downloadUrl
+  const isOneDrive = /1drv\.ms|onedrive\.live\.com|sharepoint\.com/i.test(shareUrl);
+
+  if (isOneDrive) {
+    const encoded = encodeShareUrl(shareUrl);
+    const apiUrl = "https://graph.microsoft.com/v1.0/shares/" + encoded + "/driveItem";
+    try {
+      const res = await fetch(apiUrl, {
+        headers: { "Accept": "application/json" }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Le champ @microsoft.graph.downloadUrl est une URL pré-signée sans CORS
+        if (data["@microsoft.graph.downloadUrl"]) {
+          return data["@microsoft.graph.downloadUrl"];
+        }
+      }
+    } catch(e) {
+      // Graph API non accessible, on tente le fallback
+    }
+
+    // Fallback 1drv.ms : ajouter download=1 et suivre manuellement les redirections
+    // via un HEAD pour récupérer le Location final
+    const fallback = shareUrl + (shareUrl.includes("?") ? "&" : "?") + "download=1";
+    return fallback;
+  }
+
+  // Lien direct (déjà une URL .xlsx ou similaire)
+  return shareUrl;
+}
+
+async function syncFromOneDrive() {
+  const rawUrl = document.getElementById("oneDriveUrl").value.trim();
+  const statusEl = document.getElementById("oneDriveStatus");
+  const btn = document.getElementById("oneDriveSyncBtn");
+
+  if (!rawUrl) {
+    statusEl.style.color = "var(--accent-orange)";
+    statusEl.textContent = "Veuillez coller un lien OneDrive.";
+    return;
+  }
+
+  if (document.getElementById("oneDriveSaveUrl").checked) {
+    localStorage.setItem("ddd_onedrive_url", rawUrl);
+  } else {
+    localStorage.removeItem("ddd_onedrive_url");
+  }
+
+  statusEl.style.color = "var(--gray-500)";
+  statusEl.textContent = "Résolution du lien OneDrive...";
+  btn.disabled = true;
+
+  try {
+    // Étape 1 : résoudre l'URL de partage en URL de téléchargement direct
+    const downloadUrl = await resolveOneDriveDownloadUrl(rawUrl);
+
+    statusEl.textContent = "Téléchargement du fichier...";
+
+    // Étape 2 : télécharger le fichier Excel (URL pré-signée, pas de CORS)
+    const response = await fetch(downloadUrl, { redirect: "follow" });
+
+    if (!response.ok) {
+      // Dernier recours : proposer le téléchargement manuel
+      throw new Error("DOWNLOAD_FAILED:" + response.status);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    statusEl.textContent = "Analyse du fichier Excel...";
+
+    if (typeof XLSX === "undefined") throw new Error("SheetJS non chargé.");
+
+    const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: null, raw: false });
+
+    if (rows.length === 0) throw new Error("Le fichier ne contient aucune ligne de données.");
+
+    const clients = rows.map((row, idx) => parseExcelRow(row, idx)).filter(Boolean);
+    if (clients.length === 0) throw new Error("Aucun client valide. Vérifiez que la feuille 'DONNEES' est en premier onglet.");
+
+    STATE.donnees = {
+      genereeLe: new Date().toISOString().slice(0, 10),
+      sourceExcel: "OneDrive — " + new Date().toLocaleString("fr-FR"),
+      clients: clients
+    };
+    normalizeAllClients();
+    persistData();
+    populateRegionFilter();
+    renderAll();
+
+    document.getElementById("oneDriveModal").classList.remove("open");
+    showNotif("Synchronisation réussie (" + clients.length + " rapports)");
+
+  } catch (err) {
+    console.error("OneDrive sync:", err);
+    const isCors = err.name === "TypeError" || (err.message && err.message.toLowerCase().includes("failed to fetch"));
+    const isDownloadFail = err.message && err.message.startsWith("DOWNLOAD_FAILED");
+    statusEl.style.color = (isCors || isDownloadFail) ? "var(--accent-orange)" : "#e53e3e";
+
+    // Construire un lien de téléchargement manuel de secours
+    const fallbackUrl = rawUrl + (rawUrl.includes("?") ? "&" : "?") + "download=1";
+
+    if (isCors || isDownloadFail) {
+      statusEl.innerHTML = "<strong>Le navigateur ne peut pas accéder directement à OneDrive.</strong><br>"
+        + "1. <a href=\"" + fallbackUrl + "\" target=\"_blank\" style=\"color:var(--primary);font-weight:600;\">Télécharger le fichier ici</a>"
+        + " &nbsp;2. Puis utilise le bouton <em>Importer un fichier Excel</em>.";
+    } else {
+      statusEl.textContent = "Erreur : " + err.message;
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+
+// ══ AUTH ══════════════════════════════════════════════════════════════════
+const _PWD_HASH = "a539b84a4eda1a15a0f9e62d4bdbdd9553b0ba35b8dd1b45c7cc4b68c3751403";
+const _SESSION_KEY = "ddd_auth_ok";
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+async function checkLogin() {
+  const input = document.getElementById("loginPwd");
+  const errEl = document.getElementById("loginError");
+  const val   = input.value;
+  if (!val) return;
+
+  const hash = await sha256(val);
+  if (hash === _PWD_HASH) {
+    sessionStorage.setItem(_SESSION_KEY, "1");
+    sessionStorage.setItem("ddd_pwd", val);  // nécessaire pour déchiffrer data.enc.json
+    document.getElementById("loginScreen").classList.add("hidden");
+    input.value = "";
+    errEl.classList.remove("show");
+    input.classList.remove("error");
+    // Lancer l'app si pas encore initialisée
+    if (!STATE.donnees || !STATE.donnees.clients.length) {
+      init();
+    }
+  } else {
+    input.classList.add("error");
+    errEl.classList.add("show");
+    input.value = "";
+    input.focus();
+    // Shake animation
+    input.style.transition = "transform .08s";
+    input.style.transform  = "translateX(-6px)";
+    setTimeout(() => input.style.transform = "translateX(6px)", 80);
+    setTimeout(() => input.style.transform = "translateX(0)", 160);
+  }
+}
+
+function checkSession() {
+  if (sessionStorage.getItem(_SESSION_KEY) === "1") {
+    document.getElementById("loginScreen").classList.add("hidden");
+    return true;
+  }
+  // Bloquer l'init jusqu'à login réussi
+  document.getElementById("loginPwd").focus();
+  return false;
+}
+// ══════════════════════════════════════════════════════════════════════════
+
+</script>
+
+
+  <!-- MODAL ONEDRIVE -->
+  <div class="modal-overlay" id="oneDriveModal">
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <div class="modal-title">Synchroniser depuis OneDrive</div>
+        <button class="modal-close" data-close="oneDriveModal">&times;</button>
+      </div>
+      <div style="padding:20px 24px 24px;">
+        <p style="font-size:13px;color:var(--gray-600);margin-bottom:10px;line-height:1.6;">
+          Colle le lien de partage OneDrive de ton fichier Excel.
+        </p>
+        <div style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--gray-600);line-height:1.7;">
+          <strong style="color:var(--gray-700);">Comment obtenir le lien :</strong><br>
+          OneDrive &rarr; clic droit sur le fichier &rarr; <em>Partager</em> &rarr; choisir <em>Toute personne avec le lien / Affichage</em> &rarr; Copier le lien<br>
+          <span style="color:var(--accent-orange);font-weight:500;">Note :</span> si OneDrive bloque le chargement direct, un lien de téléchargement manuel sera proposé automatiquement.
+        </div>
+        <label style="font-size:12px;font-weight:600;color:var(--gray-700);display:block;margin-bottom:6px;">URL OneDrive</label>
+        <input type="text" id="oneDriveUrl"
+          placeholder="https://1drv.ms/x/... ou https://afp-my.sharepoint.com/..."
+          style="width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;margin-bottom:12px;outline:none;"
+          onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--gray-200)'">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+          <input type="checkbox" id="oneDriveSaveUrl" style="cursor:pointer;width:15px;height:15px;">
+          <label for="oneDriveSaveUrl" style="font-size:13px;color:var(--gray-600);cursor:pointer;">Mémoriser ce lien</label>
+        </div>
+        <div id="oneDriveStatus" style="font-size:12px;min-height:20px;margin-bottom:14px;line-height:1.5;"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn" data-close="oneDriveModal">Annuler</button>
+          <button class="btn btn-onedrive" id="oneDriveSyncBtn">Synchroniser</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
