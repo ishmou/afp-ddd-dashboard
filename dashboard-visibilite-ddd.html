@@ -71,33 +71,36 @@
 <title>Dashboard de visibilité clients, équipe DDD</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root {
   /* ── Couleurs AFP ── */
   --primary:        #325AFF;
-  --primary-dark:   #2347E0;
+  --primary-dark:   #1E3FD8;
   --primary-hover:  #2347E0;
-  --primary-soft:   rgba(50, 90, 255, 0.14);
+  --primary-soft:   rgba(50, 90, 255, 0.10);
   --primary-muted:  rgba(50, 90, 255, 0.08);
+  --primary-glow:   rgba(50, 90, 255, 0.22);
 
-  /* ── Fonds dark ── */
-  --bg:             #0A0F1E;
-  --bg-base:        #0A0F1E;
-  --bg-surface:     #111827;
-  --bg-elevated:    #1A2234;
-  --bg-subtle:      #141C2E;
+  /* ── Fonds dark profond stratifié ── */
+  --bg:             #060A14;
+  --bg-base:        #060A14;
+  --bg-surface:     #0D1424;
+  --bg-card:        #0F1929;
+  --bg-elevated:    #131D30;
+  --bg-subtle:      #0A1020;
 
   /* ── Rétro-compat (remappés dark) ── */
-  --white:          #111827;   /* surfaces (cartes, sidebar…) */
-  --black:          #E2E8F0;   /* texte principal clair */
+  --white:          #0F1929;   /* surfaces (cartes, sidebar…) */
+  --black:          #EEF2FF;   /* texte principal clair */
 
   /* ── Texte ── */
-  --text-primary:   #E2E8F0;
-  --text-secondary: #94A3B8;
-  --text-muted:     #64748B;
+  --text-primary:   #EEF2FF;
+  --text-secondary: #8B98B8;
+  --text-muted:     #4A5578;
+  --text-accent:    #A5B4FC;
 
   /* ── Gris dark ── */
   --gray-50:        #0D1320;
@@ -117,8 +120,9 @@
   --accent-red:     #EF4444;
 
   /* ── Glass ── */
-  --glass-bg:       rgba(255, 255, 255, 0.04);
-  --glass-border:   rgba(255, 255, 255, 0.08);
+  --glass-bg:            rgba(165, 180, 252, 0.04);
+  --glass-border:        rgba(165, 180, 252, 0.09);
+  --glass-border-hover:  rgba(165, 180, 252, 0.18);
 
   /* ── Shadows dark ── */
   --shadow-sm:      0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.40);
@@ -153,7 +157,20 @@ html, body {
   -webkit-font-smoothing: antialiased;
   font-feature-settings: 'cv11', 'ss01';
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.12) transparent;
+  scrollbar-color: rgba(165,180,252,0.15) transparent;
+}
+
+/* ── Typographie hiérarchique ── */
+h1, h2, h3, .section-title, .sidebar-brand-name, .kpi-label, .chart-title,
+.modal h3, .detail-panel h3, .nav-label {
+  font-family: 'Syne', 'Inter', system-ui, sans-serif;
+}
+
+.kpi-value, .kpi-num, .stat-value, .score-value, [class*="kpi-val"],
+.clients-table td:nth-child(n+4), .data-num {
+  font-family: 'DM Mono', 'JetBrains Mono', monospace;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.02em;
 }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -451,36 +468,48 @@ section {
 }
 
 .kpi-card {
-  background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-md);
+  background: var(--bg-card, #0F1929);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
   padding: 20px 22px;
   position: relative;
-  transition: all 0.2s ease;
+  transition: transform 0.22s cubic-bezier(0.16,1,0.3,1),
+              border-color 0.2s,
+              box-shadow 0.22s;
   overflow: hidden;
+  cursor: default;
 }
 
 .kpi-card::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  height: 3px;
+  top: 0; left: 0;
+  height: 2px;
   width: 100%;
-  background: var(--accent);
+  background: var(--accent, var(--primary));
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.22s;
+}
+
+/* Glow latéral au hover */
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--accent-rgb,50,90,255),0.08) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.22s;
+  pointer-events: none;
 }
 
 .kpi-card:hover {
-  border-color: var(--gray-300);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--glass-border-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md), 0 0 30px rgba(50,90,255,0.10);
 }
 
-.kpi-card:hover::before {
-  opacity: 1;
-}
+.kpi-card:hover::before { opacity: 1; }
+.kpi-card:hover::after  { opacity: 1; }
 
 .kpi-card.kpi-primary { --accent: var(--primary); }
 .kpi-card.kpi-organic { --accent: var(--accent-teal); }
@@ -660,6 +689,26 @@ section {
   flex-wrap: wrap;
 }
 
+.table-results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--bg-elevated);
+}
+.table-results-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+}
+.table-results-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
 .filter-chips {
   display: flex;
   align-items: center;
@@ -705,9 +754,40 @@ section {
 /* ============ TABLE ============ */
 .table-card {
   background: var(--white);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+/* ── Table wrapper : hauteur fixe + scroll interne ── */
+.campaign-table-wrapper {
+  position: relative;
+  max-height: 520px;
+  overflow-y: auto;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(165,180,252,0.2) transparent;
+}
+.campaign-table-wrapper::-webkit-scrollbar { width: 6px; }
+.campaign-table-wrapper::-webkit-scrollbar-track { background: transparent; }
+.campaign-table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(165,180,252,0.2);
+  border-radius: 999px;
+}
+.campaign-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(165,180,252,0.35);
+}
+/* Gradient fade bas — indique qu'il y a du scroll */
+.campaign-table-wrapper::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: block;
+  background: linear-gradient(to bottom, transparent, var(--bg-card, #0F1929));
+  pointer-events: none;
 }
 
 table.clients-table {
@@ -716,8 +796,12 @@ table.clients-table {
 }
 
 .clients-table thead th {
-  background: var(--gray-50);
-  border-bottom: 1px solid var(--gray-200);
+  background: var(--bg-elevated);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
   padding: 12px 16px;
   text-align: left;
   font-size: 11px;
@@ -919,6 +1003,27 @@ table.clients-table {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+}
+
+/* Radar layout dans le panneau de détail */
+.detail-radar-layout {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.detail-radar-chart {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.detail-kpi-grid-sm {
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 600px) {
+  .detail-radar-layout { flex-direction: column; }
+  .detail-radar-chart canvas { width: 180px !important; height: 180px !important; }
 }
 
 .detail-kpi {
@@ -1792,76 +1897,112 @@ table.clients-table {
 .btn-github:hover { background: #1a1e22; color: #fff; }
 
 
-/* ── LOGIN SCREEN ──────────────────────────────────────────────── */
 /* ── LOGIN SCREEN ─────────────────────────────────────────────── */
 #loginScreen {
   position: fixed;
   inset: 0;
-  background: #0a0f1e;
+  background: #060A14;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   font-family: 'Inter', Arial, sans-serif;
+  overflow: hidden;
 }
-#loginScreen.hidden { display: none; }
+#loginScreen.hidden { display: none !important; }
+
+#loginCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.7;
+}
 
 .login-card {
-  background: #111827;
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 16px;
-  padding: 48px 44px 40px;
-  width: 380px;
-  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+  position: relative;
+  z-index: 1;
+  background: rgba(13, 20, 36, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(165,180,252,0.12);
+  border-radius: 20px;
+  padding: 52px 48px 44px;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,0.04);
+  animation: loginCardIn .5s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes loginCardIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
 .login-logo {
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: .12em;
+  letter-spacing: .16em;
   color: #325AFF;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   text-transform: uppercase;
+}
+.login-logo::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: #325AFF;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #325AFF;
 }
 .login-title {
-  font-size: 22px;
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 4px;
-  letter-spacing: -.02em;
+  margin-bottom: 6px;
+  letter-spacing: -.03em;
+  line-height: 1.2;
 }
 .login-sub {
-  font-size: 13px;
-  color: rgba(255,255,255,.4);
-  margin-bottom: 32px;
+  font-size: 12px;
+  color: rgba(165,180,252,0.5);
+  margin-bottom: 36px;
+  letter-spacing: 0.01em;
 }
 .login-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: .06em;
+  letter-spacing: .09em;
   text-transform: uppercase;
-  color: rgba(255,255,255,.5);
+  color: rgba(165,180,252,0.5);
   margin-bottom: 8px;
   display: block;
 }
 .login-input {
   width: 100%;
-  padding: 12px 14px;
-  background: rgba(255,255,255,.06);
-  border: 1.5px solid rgba(255,255,255,.1);
-  border-radius: 8px;
-  color: #fff;
+  padding: 13px 16px;
+  background: rgba(165,180,252,0.06);
+  border: 1.5px solid rgba(165,180,252,0.12);
+  border-radius: 10px;
+  color: #EEF2FF;
   font-size: 15px;
-  font-family: inherit;
+  font-family: 'DM Mono', monospace;
   outline: none;
-  transition: border-color .15s;
+  transition: border-color .18s, box-shadow .18s;
   box-sizing: border-box;
-  letter-spacing: .08em;
+  letter-spacing: .1em;
 }
-.login-input:focus { border-color: #325AFF; }
-.login-input.error { border-color: #ef4444; }
+.login-input:focus {
+  border-color: #325AFF;
+  box-shadow: 0 0 0 3px rgba(50,90,255,0.18);
+}
+.login-input.error { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.16); }
 .login-error {
   font-size: 12px;
-  color: #ef4444;
+  color: #f87171;
   margin-top: 8px;
   min-height: 16px;
   display: none;
@@ -1869,26 +2010,37 @@ table.clients-table {
 .login-error.show { display: block; }
 .login-btn {
   width: 100%;
-  margin-top: 20px;
-  padding: 13px;
-  background: #325AFF;
+  margin-top: 22px;
+  padding: 14px;
+  background: linear-gradient(135deg, #325AFF, #1E3FD8);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 700;
-  font-family: inherit;
+  font-family: 'Syne', 'Inter', sans-serif;
   cursor: pointer;
-  transition: background .15s;
-  letter-spacing: -.01em;
+  transition: opacity .18s, box-shadow .18s, transform .1s;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 20px rgba(50,90,255,0.35);
+  position: relative;
+  overflow: hidden;
 }
-.login-btn:hover { background: #2347e0; }
-.login-btn:active { background: #1a35cc; }
+.login-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+  pointer-events: none;
+}
+.login-btn:hover { opacity: .92; box-shadow: 0 6px 28px rgba(50,90,255,0.45); transform: translateY(-1px); }
+.login-btn:active { transform: translateY(0); opacity: 1; }
 .login-footer {
-  margin-top: 24px;
+  margin-top: 28px;
   font-size: 11px;
-  color: rgba(255,255,255,.2);
+  color: rgba(165,180,252,0.25);
   text-align: center;
+  letter-spacing: 0.03em;
 }
 
 </style>
@@ -1897,10 +2049,11 @@ table.clients-table {
 
 <!-- ══ LOGIN SCREEN ══════════════════════════════════════════════════════ -->
 <div id="loginScreen">
+  <canvas id="loginCanvas" aria-hidden="true"></canvas>
   <div class="login-card">
-    <div class="login-logo">AFP</div>
-    <div class="login-title">Dashboard DDD</div>
-    <div class="login-sub">Distribution et Diffusion Digitale</div>
+    <div class="login-logo">AFP · DDD</div>
+    <div class="login-title">Dashboard<br>Visibilité</div>
+    <div class="login-sub">Département Développement et Diversification</div>
     <label class="login-label" for="loginPwd">Mot de passe</label>
     <input
       class="login-input"
@@ -1911,7 +2064,7 @@ table.clients-table {
       onkeydown="if(event.key==='Enter') checkLogin()"
     >
     <div class="login-error" id="loginError">Mot de passe incorrect.</div>
-    <button class="login-btn" onclick="checkLogin()">Accéder au dashboard</button>
+    <button class="login-btn" onclick="checkLogin()">Accéder au dashboard →</button>
     <div class="login-footer">Accès réservé à l'équipe AFP DDD</div>
   </div>
 </div>
@@ -1924,7 +2077,7 @@ table.clients-table {
     <div class="brand-logo">AFP</div>
     <div>
       <div class="sidebar-brand-name">Dashboard DDD</div>
-      <div class="sidebar-brand-sub">Distribution &amp; Diffusion Digitale</div>
+      <div class="sidebar-brand-sub">Département Développement et Diversification</div>
     </div>
   </div>
   <div class="sidebar-nav">
@@ -1940,6 +2093,14 @@ table.clients-table {
     <a class="nav-item" href="#clientsSection" data-section="clientsSection">
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/><rect x="2" y="7.1" width="12" height="1.8" rx="0.9" fill="currentColor"/><rect x="2" y="11.2" width="7" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/></svg>
       Campagnes
+    </a>
+    <a class="nav-item" href="#timelineSection" data-section="timelineSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M2 4h4M2 12h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="4" r="1.5" fill="currentColor"/><circle cx="10" cy="12" r="1.5" fill="currentColor"/></svg>
+      Timeline
+    </a>
+    <a class="nav-item" href="#heatmapSection" data-section="heatmapSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="4" height="4" rx="1" fill="currentColor" opacity=".9"/><rect x="7" y="2" width="4" height="4" rx="1" fill="currentColor" opacity=".5"/><rect x="2" y="7" width="4" height="4" rx="1" fill="currentColor" opacity=".3"/><rect x="7" y="7" width="4" height="4" rx="1" fill="currentColor" opacity=".7"/><rect x="2" y="12" width="4" height="2.5" rx="1" fill="currentColor" opacity=".6"/><rect x="7" y="12" width="4" height="2.5" rx="1" fill="currentColor" opacity=".2"/></svg>
+      Heatmap
     </a>
     <span class="sidebar-label" style="margin-top:8px;">Outils</span>
     <a class="nav-item" href="#management" data-section="management">
@@ -2037,9 +2198,18 @@ table.clients-table {
       </div>
     </div>
 
+    <!-- World Map -->
+    <div class="chart-card" style="margin-bottom:0;">
+      <div class="chart-card-header">
+        <div class="chart-title">Diffusion mondiale</div>
+        <div style="font-size:11px;color:var(--text-muted);">Points proportionnels aux retombées par pays</div>
+      </div>
+      <div id="worldMapContainer" style="overflow:hidden;border-radius:var(--radius-md);"></div>
+    </div>
+
     <div class="chart-card">
       <div class="chart-card-header">
-        <div class="chart-title">Évolution mensuelle des retombées</div>
+        <div class="chart-title">Évolution mensuelle des vues</div>
         <div class="chart-toggle" id="monthlyToggle">
           <button data-metric="vues" class="active">Vues</button>
           <button data-metric="emails">Emails ciblés</button>
@@ -2085,23 +2255,29 @@ table.clients-table {
     </div>
     <select id="filterRegion" style="display:none;"></select>
     <div class="table-card">
-      <table class="clients-table" id="clientsTable">
-        <thead>
-          <tr>
-            <th data-col="nom">Client <span class="sort-ind"></span></th>
-            <th data-col="datePublication">Publication <span class="sort-ind"></span></th>
-            <th data-col="regionAFP">Région AFP <span class="sort-ind"></span></th>
-            <th data-col="boost">BOOST <span class="sort-ind"></span></th>
-            <th data-col="tauxOuverture" class="num-cell">Ouv. <span class="sort-ind"></span></th>
-            <th data-col="tauxClic" class="num-cell">Clic <span class="sort-ind"></span></th>
-            <th data-col="vuesUniques" class="num-cell">Views <span class="sort-ind"></span></th>
-            <th data-col="pickups" class="num-cell">Pick-ups <span class="sort-ind"></span></th>
-            <th data-col="mediaBoost" class="num-cell">Media Boost <span class="sort-ind"></span></th>
-            <th data-col="totalPickups" class="num-cell">Total <span class="sort-ind"></span></th>
-          </tr>
-        </thead>
-        <tbody id="clientsTableBody"></tbody>
-      </table>
+      <div class="table-results-bar">
+        <span class="table-results-count" id="tableResultsCount">— campagnes</span>
+        <span class="table-results-hint">Scroll ↕</span>
+      </div>
+      <div class="campaign-table-wrapper" id="campaignTableWrapper">
+        <table class="clients-table" id="clientsTable">
+          <thead>
+            <tr>
+              <th data-col="nom">Client <span class="sort-ind"></span></th>
+              <th data-col="datePublication">Publication <span class="sort-ind"></span></th>
+              <th data-col="regionAFP">Région AFP <span class="sort-ind"></span></th>
+              <th data-col="boost">BOOST <span class="sort-ind"></span></th>
+              <th data-col="tauxOuverture" class="num-cell">Ouv. <span class="sort-ind"></span></th>
+              <th data-col="tauxClic" class="num-cell">Clic <span class="sort-ind"></span></th>
+              <th data-col="vuesUniques" class="num-cell">Views <span class="sort-ind"></span></th>
+              <th data-col="pickups" class="num-cell">Pick-ups <span class="sort-ind"></span></th>
+              <th data-col="mediaBoost" class="num-cell">Media Boost <span class="sort-ind"></span></th>
+              <th data-col="totalPickups" class="num-cell">Total <span class="sort-ind"></span></th>
+            </tr>
+          </thead>
+          <tbody id="clientsTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -2184,6 +2360,32 @@ table.clients-table {
       <button class="btn" id="resetLocalBtn">Réinitialiser aux données d'origine</button>
       <input type="file" id="importFile" accept="application/json" style="display:none;">
       <input type="file" id="importExcelFile" accept=".xlsx,.xls,.csv" style="display:none;">
+    </div>
+  </section>
+
+  <!-- TIMELINE DES CAMPAGNES -->
+  <section id="timelineSection">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Frise chronologique</div>
+        <div class="section-desc">Toutes les campagnes dans le temps, hauteur = score de performance</div>
+      </div>
+    </div>
+    <div class="chart-card" style="overflow:hidden;">
+      <div id="campaignTimeline" style="overflow-x:auto;overflow-y:hidden;padding:16px 16px 8px;min-height:180px;"></div>
+    </div>
+  </section>
+
+  <!-- HEATMAP RÉGIONS × KPIs -->
+  <section id="heatmapSection">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Heatmap Régions × KPIs</div>
+        <div class="section-desc">Intensité relative par région AFP — 100% = meilleure valeur</div>
+      </div>
+    </div>
+    <div class="chart-card" style="overflow:auto;">
+      <div id="regionHeatmap"></div>
     </div>
   </section>
 
@@ -2799,9 +3001,34 @@ function applyFilters() {
 }
 
 // ============ KPI RENDER ============
+// ── Animated Counter ─────────────────────────────────────────────────────────
+function animateCounter(element, target, duration, suffix, decimals) {
+  if (!element) return;
+  duration  = duration  || 1100;
+  suffix    = suffix    || "";
+  decimals  = decimals  || 0;
+  const start   = performance.now();
+  const easeOut = t => 1 - Math.pow(1 - t, 3);
+  // Stop previous animation if running
+  if (element._rafId) cancelAnimationFrame(element._rafId);
+  function update(now) {
+    const t   = Math.min((now - start) / duration, 1);
+    const val = easeOut(t) * target;
+    if (decimals > 0) {
+      element.textContent = val.toFixed(decimals).replace(".", ",") + suffix;
+    } else {
+      element.textContent = Math.round(val).toLocaleString("fr-FR") + suffix;
+    }
+    if (t < 1) element._rafId = requestAnimationFrame(update);
+    else        element._rafId = null;
+  }
+  element._rafId = requestAnimationFrame(update);
+}
+
 function renderKPIs() {
   const arr = STATE.clientsAffiches;
-  document.getElementById("kpiClients").textContent = fmtNum(arr.length);
+  const clientsEl = document.getElementById("kpiClients");
+  if (clientsEl) animateCounter(clientsEl, arr.length, 800);
 
   const picks      = arr.reduce((s, c) => s + (c.pickups    || 0), 0);
   const mboost     = arr.reduce((s, c) => s + (c.mediaBoost || 0), 0);
@@ -2816,11 +3043,11 @@ function renderKPIs() {
   const avgOpen  = openArr.length ? openArr.reduce((s, c) => s + c.tauxOuverture, 0) / openArr.length : null;
   const avgClic  = clicArr.length ? clicArr.reduce((s, c) => s + c.tauxClic,      0) / clicArr.length : null;
 
-  document.getElementById("kpiOrganic").textContent         = fmtNum(picks);
-  document.getElementById("kpiPartnerships").textContent    = fmtNum(mboost);
-  document.getElementById("kpiTotalVisibility").textContent = fmtNum(total);
-  document.getElementById("kpiViews").textContent           = fmtNum(views);
-  document.getElementById("kpiZones").textContent           = fmtNum(regions.size);
+  animateCounter(document.getElementById("kpiOrganic"),         picks,       1000);
+  animateCounter(document.getElementById("kpiPartnerships"),    mboost,      1000);
+  animateCounter(document.getElementById("kpiTotalVisibility"), total,       1200);
+  animateCounter(document.getElementById("kpiViews"),           views,       1200);
+  animateCounter(document.getElementById("kpiZones"),           regions.size, 700);
   document.getElementById("kpiAvgOpen").innerHTML =
     avgOpen != null ? avgOpen.toFixed(2).replace(".", ",") + '<span class="unit">%</span>' : '<span class="unit">n/d</span>';
   document.getElementById("kpiAvgClic").innerHTML =
@@ -2861,8 +3088,15 @@ function renderTable() {
   const body = document.getElementById("clientsTableBody");
   body.innerHTML = "";
 
+  // Mettre à jour le compteur de résultats
+  const countEl = document.getElementById("tableResultsCount");
+  if (countEl) {
+    const n = STATE.clientsAffiches.length;
+    countEl.textContent = n === 0 ? "Aucune campagne" : n === 1 ? "1 campagne" : `${n} campagnes`;
+  }
+
   if (STATE.clientsAffiches.length === 0) {
-    body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:32px; color:var(--gray-400); font-style:italic;">Aucun rapport ne correspond aux filtres.</td></tr>';
+    body.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:32px; color:var(--text-muted); font-style:italic;">Aucun rapport ne correspond aux filtres.</td></tr>';
   }
 
   STATE.clientsAffiches.forEach(c => {
@@ -2944,14 +3178,19 @@ function openDetail(id) {
 
   const body = document.getElementById("detailBody");
 
-  // Scoring summary
+  // Scoring summary + Radar Chart
   let html = `<div class="detail-section">
     <h4>Performance globale</h4>
-    <div class="detail-kpi-grid">
-      <div class="detail-kpi"><div class="detail-kpi-label">Visibility score</div><div class="detail-kpi-value">${c.visibilityScore || 0}<span class="unit" style="font-size:13px;color:var(--gray-400);"> / 100</span></div></div>
-      <div class="detail-kpi"><div class="detail-kpi-label">Engagement score</div><div class="detail-kpi-value">${c.engagementScore || 0}<span class="unit" style="font-size:13px;color:var(--gray-400);"> / 100</span></div></div>
-      <div class="detail-kpi"><div class="detail-kpi-label">Media reach score</div><div class="detail-kpi-value">${c.mediaReachScore || 0}<span class="unit" style="font-size:13px;color:var(--gray-400);"> / 100</span></div></div>
-      <div class="detail-kpi"><div class="detail-kpi-label">Total Pick-ups</div><div class="detail-kpi-value">${fmtNum(c.totalPickups)}</div></div>
+    <div class="detail-radar-layout">
+      <div class="detail-radar-chart">
+        <canvas id="detailRadarCanvas" width="220" height="220"></canvas>
+      </div>
+      <div class="detail-kpi-grid detail-kpi-grid-sm">
+        <div class="detail-kpi"><div class="detail-kpi-label">Visibility score</div><div class="detail-kpi-value">${c.visibilityScore || 0}<span class="unit" style="font-size:13px;color:var(--text-muted);"> / 100</span></div></div>
+        <div class="detail-kpi"><div class="detail-kpi-label">Engagement score</div><div class="detail-kpi-value">${c.engagementScore || 0}<span class="unit" style="font-size:13px;color:var(--text-muted);"> / 100</span></div></div>
+        <div class="detail-kpi"><div class="detail-kpi-label">Media reach score</div><div class="detail-kpi-value">${c.mediaReachScore || 0}<span class="unit" style="font-size:13px;color:var(--text-muted);"> / 100</span></div></div>
+        <div class="detail-kpi"><div class="detail-kpi-label">Total Pick-ups</div><div class="detail-kpi-value">${fmtNum(c.totalPickups)}</div></div>
+      </div>
     </div>
   </div>`;
 
@@ -3100,6 +3339,50 @@ function openDetail(id) {
   }
 
   body.innerHTML = html;
+
+  // ── Radar Chart ────────────────────────────────────────────────────────────
+  (function initRadar() {
+    const canvas = document.getElementById("detailRadarCanvas");
+    if (!canvas || typeof Chart === "undefined") return;
+    // Détruire le chart précédent si existant
+    if (window._detailRadarChart) { window._detailRadarChart.destroy(); window._detailRadarChart = null; }
+    const vues   = Math.min(100, ((c.vuesUniques  || 0) / 2000) * 100);
+    const ouv    = c.tauxOuverture || 0;
+    const clic   = c.tauxClic      || 0;
+    const vis    = Math.min(100, ((c.totalPickups  || 0) / 200)  * 100);
+    const distrib = Math.min(100, ((c.pressroomsAFP || 0) / 2000) * 100);
+    const engage = Math.min(100, (c.engagementScore || 0));
+    window._detailRadarChart = new Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels: ['Vues uniques', 'Taux ouv.', 'Taux clic', 'Visibilité', 'Distribution', 'Engagement'],
+        datasets: [{
+          data: [vues, ouv, clic, vis, distrib, engage],
+          backgroundColor: 'rgba(50,90,255,0.12)',
+          borderColor: 'rgba(50,90,255,0.8)',
+          borderWidth: 2,
+          pointBackgroundColor: '#325AFF',
+          pointRadius: 3,
+          pointHoverRadius: 5
+        }]
+      },
+      options: {
+        responsive: false,
+        animation: { duration: 700 },
+        scales: {
+          r: {
+            min: 0, max: 100,
+            backgroundColor: 'rgba(50,90,255,0.04)',
+            gridLines: { color: 'rgba(165,180,252,0.1)' },
+            angleLines: { color: 'rgba(165,180,252,0.12)' },
+            ticks: { display: false, stepSize: 25 },
+            pointLabels: { color: '#8B98B8', font: { family: 'Inter', size: 10 } }
+          }
+        },
+        plugins: { legend: { display: false }, tooltip: { enabled: true } }
+      }
+    });
+  })();
 
   document.getElementById("detailPanel").classList.add("open");
   document.getElementById("detailPanel").setAttribute("aria-hidden", "false");
@@ -3449,6 +3732,9 @@ function renderAll() {
   renderMonthlyChart(STATE.monthlyMetric || "vues");
   renderCompChart(STATE.compMetric || "vues");
   renderExecutivePanel();
+  renderWorldMap(STATE.clientsAffiches);
+  renderTimeline();
+  renderHeatmap();
   applyRoleVisibility();
 }
 
@@ -3601,7 +3887,7 @@ function bindEvents() {
   });
 
   // Sidebar nav — active state on scroll
-  const sectionIds = ["overview", "comparative", "clientsSection", "management", "aiSection"];
+  const sectionIds = ["overview", "comparative", "clientsSection", "timelineSection", "heatmapSection", "management", "aiSection"];
   const sectionTitles = {
     overview: "Vue d'ensemble",
     comparative: "Performance",
@@ -3616,7 +3902,7 @@ function bindEvents() {
     let current = sectionIds[0];
     sectionIds.forEach(id => {
       const el = document.getElementById(id);
-      if (el && el.getBoundingClientRect().top <= 80) current = id;
+      if (el && el.getBoundingClientRect().top <= window.innerHeight * 0.4) current = id;
     });
     navItems.forEach(item => item.classList.toggle("active", item.dataset.section === current));
     if (headerTitle) headerTitle.textContent = sectionTitles[current] || "";
@@ -4285,12 +4571,330 @@ async function checkLogin() {
 function checkSession() {
   if (sessionStorage.getItem(_SESSION_KEY) === "1") {
     document.getElementById("loginScreen").classList.add("hidden");
+    stopLoginCanvas();
     return true;
   }
   // Bloquer l'init jusqu'au login réussi
   document.getElementById("loginPwd").focus();
   return false;
 }
+
+// ══ LOGIN CANVAS — Flux de particules (Information Flow) ══════════════════
+(function initLoginCanvas() {
+  const canvas = document.getElementById("loginCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let W, H, particles = [], nodes = [], raf = null, stopped = false;
+
+  // Nœuds : capitales médiatiques AFP
+  const AFP_NODES = [
+    [0.5, 0.45],  // Paris
+    [0.52, 0.38], // Londres
+    [0.62, 0.47], // Moscou
+    [0.58, 0.55], // Beyrouth/MENA
+    [0.68, 0.5],  // Delhi
+    [0.82, 0.42], // Tokyo
+    [0.82, 0.55], // Singapour
+    [0.15, 0.4],  // New York
+    [0.2,  0.6],  // São Paulo
+    [0.53, 0.65], // Lagos
+    [0.8,  0.3],  // Pékin
+  ];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    nodes = AFP_NODES.map(([px, py]) => ({ x: px * W, y: py * H }));
+  }
+
+  function mkParticle() {
+    const origin = nodes[Math.floor(Math.random() * nodes.length)];
+    const dest   = nodes[Math.floor(Math.random() * nodes.length)];
+    const hue    = Math.random() < 0.6 ? 225 : 175; // bleu ou teal
+    return {
+      x: origin.x, y: origin.y,
+      ox: origin.x, oy: origin.y,
+      dx: dest.x,   dy: dest.y,
+      t: Math.random(),        // progression 0→1
+      speed: 0.002 + Math.random() * 0.003,
+      // Courbe de Bézier quadratique : point de contrôle dévié
+      cx: (origin.x + dest.x) / 2 + (Math.random() - 0.5) * W * 0.3,
+      cy: (origin.y + dest.y) / 2 + (Math.random() - 0.5) * H * 0.3,
+      alpha: 0, maxAlpha: 0.4 + Math.random() * 0.4,
+      hue: hue,
+      size: 1 + Math.random() * 1.5,
+    };
+  }
+
+  function bezier(p0, p1, p2, t) {
+    const u = 1 - t;
+    return u * u * p0 + 2 * u * t * p1 + t * t * p2;
+  }
+
+  function draw() {
+    if (stopped) return;
+    ctx.clearRect(0, 0, W, H);
+
+    // Nœuds pulsants
+    nodes.forEach((n, i) => {
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() * 0.001 + i);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2 + pulse * 2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(50,90,255,${0.3 + pulse * 0.4})`;
+      ctx.fill();
+      // Glow
+      const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 12 + pulse * 8);
+      g.addColorStop(0, `rgba(50,90,255,${0.18 + pulse * 0.1})`);
+      g.addColorStop(1, 'rgba(50,90,255,0)');
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+    });
+
+    // Particules
+    particles.forEach(p => {
+      p.t += p.speed;
+      if (p.t >= 1) { p.t = 0; Object.assign(p, mkParticle(), { t: 0 }); return; }
+      p.alpha = p.t < 0.15 ? p.t / 0.15 * p.maxAlpha
+              : p.t > 0.85 ? (1 - p.t) / 0.15 * p.maxAlpha
+              : p.maxAlpha;
+      p.x = bezier(p.ox, p.cx, p.dx, p.t);
+      p.y = bezier(p.oy, p.cy, p.dy, p.t);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue},90%,70%,${p.alpha})`;
+      ctx.fill();
+    });
+
+    raf = requestAnimationFrame(draw);
+  }
+
+  function start() {
+    stopped = false;
+    resize();
+    // Remplir à 250 particules
+    while (particles.length < 250) {
+      const p = mkParticle();
+      p.t = Math.random(); // disperser les phases
+      particles.push(p);
+    }
+    if (!raf) draw();
+  }
+
+  window.stopLoginCanvas = function() {
+    stopped = true;
+    if (raf) { cancelAnimationFrame(raf); raf = null; }
+  };
+
+  window.addEventListener("resize", () => { resize(); });
+  start();
+})();
+
+// ══ TIMELINE DES CAMPAGNES ════════════════════════════════════════════════
+function renderTimeline() {
+  const container = document.getElementById("campaignTimeline");
+  if (!container) return;
+  const arr = [...(STATE.clientsAffiches || [])].filter(c => c.datePublication);
+  arr.sort((a, b) => (a.datePublication || "").localeCompare(b.datePublication || ""));
+  if (arr.length === 0) { container.innerHTML = '<div class="empty-state">Aucune campagne avec date.</div>'; return; }
+
+  const REGION_COL = { FR:"#325AFF", MENA:"#F59E0B", ASIA:"#06B6D4", AMLAT:"#8B5CF6", EUROPE:"#6366F1", AFR:"#EC4899", ENG:"#10B981" };
+  const dates = arr.map(c => new Date(c.datePublication)).filter(d => !isNaN(d));
+  if (dates.length === 0) { container.innerHTML = '<div class="empty-state">Dates non parsables.</div>'; return; }
+
+  const minD = Math.min(...dates.map(d => d.getTime()));
+  const maxD = Math.max(...dates.map(d => d.getTime()));
+  const span = maxD - minD || 1;
+  const W    = Math.max(container.offsetWidth || 700, arr.length * 28);
+  const H    = 140;
+  const PAD  = { l:8, r:8, t:16, b:32 };
+  const maxScore = Math.max(1, ...arr.map(c => c.visibilityScore || 0));
+
+  let svgContent = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="min-width:${W}px;height:${H}px;display:block;">`;
+  // Axe X
+  svgContent += `<line x1="${PAD.l}" y1="${H - PAD.b}" x2="${W - PAD.r}" y2="${H - PAD.b}" stroke="rgba(165,180,252,0.15)" stroke-width="1"/>`;
+
+  // Mois labels
+  const months = [];
+  let cur = new Date(minD);
+  cur.setDate(1);
+  while (cur.getTime() <= maxD + 86400000 * 31) {
+    months.push(new Date(cur));
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  months.forEach(m => {
+    const x = PAD.l + ((m.getTime() - minD) / span) * (W - PAD.l - PAD.r);
+    svgContent += `<line x1="${x}" y1="${PAD.t}" x2="${x}" y2="${H - PAD.b}" stroke="rgba(165,180,252,0.06)" stroke-width="1" stroke-dasharray="3,3"/>`;
+    svgContent += `<text x="${x}" y="${H - 8}" font-size="9" fill="rgba(165,180,252,0.4)" text-anchor="middle" font-family="Inter">${m.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'})}</text>`;
+  });
+
+  arr.forEach((c, i) => {
+    const d = new Date(c.datePublication);
+    if (isNaN(d)) return;
+    const x      = PAD.l + ((d.getTime() - minD) / span) * (W - PAD.l - PAD.r);
+    const score  = c.visibilityScore || 10;
+    const barH   = PAD.t + (1 - score / maxScore) * (H - PAD.t - PAD.b - 4);
+    const bHeight = H - PAD.b - barH - 2;
+    const reg    = (c.regionAFP || c.regionDDD || "FR").toUpperCase();
+    const color  = REGION_COL[reg] || "#325AFF";
+    const bW     = Math.max(4, Math.min(18, (W - PAD.l - PAD.r) / arr.length * 0.6));
+    svgContent += `<rect x="${x - bW/2}" y="${barH}" width="${bW}" height="${bHeight}" rx="2" fill="${color}" fill-opacity="0.75">
+      <title>${c.nom} — ${c.datePublication} — Score: ${score}</title>
+    </rect>`;
+  });
+
+  svgContent += `</svg>`;
+  container.innerHTML = svgContent;
+}
+
+// ══ HEATMAP RÉGIONS × KPIs ════════════════════════════════════════════════
+function renderHeatmap() {
+  const container = document.getElementById("regionHeatmap");
+  if (!container) return;
+  const clients = STATE.clientsAffiches || [];
+  const REGIONS = ["FR","MENA","ASIA","AMLAT","EUROPE","AFR","ENG"];
+  const KPIS    = [
+    { key:"vuesUniques",    label:"Vues" },
+    { key:"emailsCibles",   label:"Emails" },
+    { key:"tauxOuverture",  label:"Ouv %" },
+    { key:"tauxClic",       label:"Clic %" },
+    { key:"pressroomsAFP",  label:"Pressrooms" },
+    { key:"pickups",        label:"Pick-ups" }
+  ];
+
+  // Agréger moyenne par région
+  const data = {};
+  REGIONS.forEach(r => {
+    const regional = clients.filter(c => (c.regionAFP || c.regionDDD || "").toUpperCase() === r);
+    data[r] = {};
+    KPIS.forEach(k => {
+      const vals = regional.map(c => c[k.key]).filter(v => v != null && !isNaN(v));
+      data[r][k.key] = vals.length ? vals.reduce((a,b) => a+b,0) / vals.length : 0;
+    });
+  });
+
+  // Max par colonne pour normaliser
+  const colMax = {};
+  KPIS.forEach(k => {
+    colMax[k.key] = Math.max(1, ...REGIONS.map(r => data[r][k.key]));
+  });
+
+  let html = `<table class="heatmap-table" style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr><th style="padding:8px 12px;text-align:left;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;">Région</th>`;
+  KPIS.forEach(k => {
+    html += `<th style="padding:8px 10px;text-align:center;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;">${k.label}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  REGIONS.forEach((r, ri) => {
+    html += `<tr class="heatmap-row" style="transition:background .12s;" onmouseover="this.style.background='rgba(165,180,252,0.06)'" onmouseout="this.style.background=''">`;
+    html += `<td style="padding:8px 12px;font-weight:600;font-size:11px;color:var(--text-secondary);white-space:nowrap;">${r}</td>`;
+    KPIS.forEach(k => {
+      const val  = data[r][k.key];
+      const norm = val / colMax[k.key];
+      const bg   = `rgba(50,90,255,${(norm * 0.55).toFixed(2)})`;
+      const tc   = norm > 0.5 ? '#EEF2FF' : 'var(--text-secondary)';
+      const disp = val > 0
+        ? (k.key === "tauxOuverture" || k.key === "tauxClic"
+            ? val.toFixed(1) + "%"
+            : Math.round(val).toLocaleString("fr-FR"))
+        : "—";
+      html += `<td style="padding:8px 10px;text-align:center;background:${bg};color:${tc};font-family:'DM Mono',monospace;font-size:11px;border:1px solid rgba(165,180,252,0.05);transition:all .2s;">${disp}</td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+// ══ WORLD MAP — SVG inline + points lumineux ══════════════════════════════
+const REGION_COUNTRIES = {
+  FR:     ["France"],
+  MENA:   ["UAE","Saudi Arabia","Egypt","Qatar","Kuwait","Bahrain","Morocco","Tunisia","Algeria","Jordan","Lebanon"],
+  ASIA:   ["China","Japan","South Korea","India","Singapore","Vietnam","Thailand","Indonesia","Malaysia","Philippines"],
+  AMLAT:  ["Brazil","Argentina","Colombia","Chile","Paraguay","Ecuador","Peru","Mexico","Venezuela"],
+  EUROPE: ["Germany","UK","Poland","Spain","Italy","Netherlands","Belgium","Switzerland","Sweden","Austria","Portugal"],
+  AFR:    ["Nigeria","South Africa","Kenya","Senegal","Ghana","Ethiopia","Cameroon","Tanzania"],
+  ENG:    ["USA","Canada","Australia"]
+};
+
+// Coordonnées approximatives x%/y% sur une carte Mercator 100×100
+const COUNTRY_COORDS = {
+  "France":[49,37],"UK":[47,34],"Germany":[52,35],"Poland":[55,33],"Spain":[46,40],
+  "Italy":[53,40],"Netherlands":[50,33],"Belgium":[50,34],"Switzerland":[51,37],
+  "Sweden":[53,28],"Austria":[53,36],"Portugal":[44,41],
+  "USA":[20,38],"Canada":[18,30],"Australia":[78,65],"Brazil":[32,58],"Argentina":[28,68],
+  "Colombia":[26,53],"Chile":[26,65],"Paraguay":[30,62],"Ecuador":[25,53],"Peru":[25,59],"Mexico":[18,44],"Venezuela":[28,50],
+  "UAE":[62,44],"Saudi Arabia":[60,46],"Egypt":[57,43],"Qatar":[62,45],"Kuwait":[61,43],"Bahrain":[62,44],
+  "Morocco":[47,43],"Tunisia":[51,42],"Algeria":[50,44],"Jordan":[58,43],"Lebanon":[58,41],
+  "China":[76,38],"Japan":[83,37],"South Korea":[82,38],"India":[68,47],"Singapore":[78,55],
+  "Vietnam":[78,48],"Thailand":[76,50],"Indonesia":[79,57],"Malaysia":[77,53],"Philippines":[81,50],
+  "Nigeria":[52,53],"South Africa":[55,67],"Kenya":[59,56],"Senegal":[46,51],"Ghana":[49,53],
+  "Ethiopia":[60,53],"Cameroon":[52,54],"Tanzania":[59,58]
+};
+
+const REGION_COLORS = {
+  FR:"#325AFF", MENA:"#F59E0B", ASIA:"#06B6D4",
+  AMLAT:"#8B5CF6", EUROPE:"#6366F1", AFR:"#EC4899", ENG:"#10B981"
+};
+
+function renderWorldMap(clients) {
+  const container = document.getElementById("worldMapContainer");
+  if (!container) return;
+
+  // Calculer les retombées par pays depuis les clients affichés
+  const countryData = {};
+  (clients || STATE.clientsAffiches || []).forEach(c => {
+    if (c.topPays) {
+      Object.entries(c.topPays).forEach(([pays, val]) => {
+        countryData[pays] = (countryData[pays] || 0) + (val || 0);
+      });
+    }
+    // Fallback : utiliser la région pour indiquer une présence minimale
+    const reg = c.regionAFP || c.regionDDD || "";
+    const regCountries = REGION_COUNTRIES[reg.toUpperCase()] || [];
+    regCountries.forEach(pays => {
+      if (!countryData[pays]) countryData[pays] = 1;
+    });
+  });
+
+  const maxVal = Math.max(1, ...Object.values(countryData));
+
+  let dots = "";
+  Object.entries(COUNTRY_COORDS).forEach(([pays, [px, py]]) => {
+    const val = countryData[pays] || 0;
+    if (val === 0) return;
+    const region = Object.entries(REGION_COUNTRIES).find(([,countries]) => countries.includes(pays))?.[0] || "FR";
+    const color  = REGION_COLORS[region] || "#325AFF";
+    const r      = 3 + (val / maxVal) * 7;
+    const alpha  = 0.5 + (val / maxVal) * 0.5;
+    dots += `<circle cx="${px}" cy="${py}" r="${r}" fill="${color}" fill-opacity="${alpha}" class="map-dot" data-pays="${pays}" data-val="${val}">
+      <animate attributeName="r" values="${r};${r + 2};${r}" dur="${1.5 + Math.random()}s" repeatCount="indefinite"/>
+      <title>${pays} : ${val} retombée${val > 1 ? "s" : ""}</title>
+    </circle>`;
+  });
+
+  container.innerHTML = `
+<svg viewBox="0 0 100 75" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:160px;display:block;background:#060A14;border-radius:var(--radius-md);">
+  <!-- Continents simplifiés (silhouettes approx) -->
+  <!-- Amérique du Nord -->
+  <path d="M5,20 L28,18 L30,30 L25,42 L20,50 L10,45 L5,35Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
+  <!-- Amérique du Sud -->
+  <path d="M22,48 L33,46 L35,55 L32,68 L26,72 L20,65 L19,54Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
+  <!-- Europe -->
+  <path d="M44,28 L57,26 L57,34 L54,38 L50,40 L45,38 L43,33Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
+  <!-- Afrique -->
+  <path d="M46,41 L60,40 L62,48 L59,62 L55,68 L48,65 L44,55 L45,47Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
+  <!-- Asie -->
+  <path d="M58,22 L88,20 L90,34 L85,42 L80,50 L72,55 L65,50 L60,42 L57,32Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
+  <!-- Océanie -->
+  <path d="M74,58 L85,56 L88,63 L84,68 L76,68 L72,62Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
+  ${dots}
+</svg>`;
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 
 </script>
