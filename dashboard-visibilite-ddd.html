@@ -4820,19 +4820,23 @@ const REGION_COUNTRIES = {
   ENG:    ["USA","Canada","Australia"]
 };
 
-// Coordonnées approximatives x%/y% sur une carte Mercator 100×100
+// Projection équirectangulaire 960×500 : x=(lon+180)*2.667, y=(90-lat)*2.778
 const COUNTRY_COORDS = {
-  "France":[49,37],"UK":[47,34],"Germany":[52,35],"Poland":[55,33],"Spain":[46,40],
-  "Italy":[53,40],"Netherlands":[50,33],"Belgium":[50,34],"Switzerland":[51,37],
-  "Sweden":[53,28],"Austria":[53,36],"Portugal":[44,41],
-  "USA":[20,38],"Canada":[18,30],"Australia":[78,65],"Brazil":[32,58],"Argentina":[28,68],
-  "Colombia":[26,53],"Chile":[26,65],"Paraguay":[30,62],"Ecuador":[25,53],"Peru":[25,59],"Mexico":[18,44],"Venezuela":[28,50],
-  "UAE":[62,44],"Saudi Arabia":[60,46],"Egypt":[57,43],"Qatar":[62,45],"Kuwait":[61,43],"Bahrain":[62,44],
-  "Morocco":[47,43],"Tunisia":[51,42],"Algeria":[50,44],"Jordan":[58,43],"Lebanon":[58,41],
-  "China":[76,38],"Japan":[83,37],"South Korea":[82,38],"India":[68,47],"Singapore":[78,55],
-  "Vietnam":[78,48],"Thailand":[76,50],"Indonesia":[79,57],"Malaysia":[77,53],"Philippines":[81,50],
-  "Nigeria":[52,53],"South Africa":[55,67],"Kenya":[59,56],"Senegal":[46,51],"Ghana":[49,53],
-  "Ethiopia":[60,53],"Cameroon":[52,54],"Tanzania":[59,58]
+  "France":[485,119],"UK":[475,100],"Germany":[507,108],"Poland":[533,106],
+  "Spain":[469,139],"Italy":[512,131],"Netherlands":[493,106],"Belgium":[491,108],
+  "Switzerland":[501,119],"Sweden":[528,83],"Austria":[517,119],"Portugal":[459,139],
+  "USA":[213,144],"Canada":[227,83],"Australia":[836,325],
+  "Brazil":[347,289],"Argentina":[309,344],"Colombia":[283,239],"Chile":[291,333],
+  "Paraguay":[325,314],"Ecuador":[272,256],"Peru":[277,278],"Mexico":[208,186],"Venezuela":[307,228],
+  "UAE":[627,183],"Saudi Arabia":[600,183],"Egypt":[560,178],"Qatar":[616,181],
+  "Kuwait":[608,169],"Bahrain":[613,178],
+  "Morocco":[467,161],"Tunisia":[504,156],"Algeria":[488,172],"Jordan":[576,164],"Lebanon":[576,156],
+  "China":[757,153],"Japan":[848,147],"South Korea":[821,147],"India":[692,186],
+  "Singapore":[757,247],"Vietnam":[768,211],"Thailand":[749,208],
+  "Indonesia":[781,264],"Malaysia":[773,239],"Philippines":[805,217],
+  "Nigeria":[501,225],"South Africa":[547,331],"Kenya":[581,250],
+  "Senegal":[440,211],"Ghana":[477,228],"Ethiopia":[587,225],
+  "Cameroon":[512,236],"Tanzania":[573,267]
 };
 
 const REGION_COLORS = {
@@ -4840,57 +4844,101 @@ const REGION_COLORS = {
   AMLAT:"#8B5CF6", EUROPE:"#6366F1", AFR:"#EC4899", ENG:"#10B981"
 };
 
+// Continent paths — projection équirectangulaire 960×500
+// x=(lon+180)*2.667  y=(90-lat)*2.778
+const CONTINENT_PATHS = [
+  // Amérique du Nord (main)
+  "M 248,208 L 267,181 L 277,153 L 339,119 L 307,83 L 267,56 L 213,22 L 107,50 L 40,83 L 69,92 L 128,94 L 147,111 L 155,147 L 171,161 L 197,186 L 240,208 Z",
+  // Amérique Centrale + Caraïbes (small neck)
+  "M 240,208 L 259,225 L 267,225 L 283,239 L 275,231 L 248,208 Z",
+  // Groenland
+  "M 267,22 L 307,11 L 341,22 L 339,44 L 307,56 L 267,50 Z",
+  // Amérique du Sud
+  "M 275,231 L 307,228 L 321,211 L 315,219 L 389,258 L 387,275 L 347,289 L 328,356 L 309,403 L 291,333 L 275,300 L 267,250 Z",
+  // Europe occidentale
+  "M 459,147 L 467,150 L 523,144 L 541,150 L 576,147 L 576,133 L 597,131 L 573,106 L 552,69 L 533,50 L 493,78 L 469,83 L 453,106 L 459,142 Z",
+  // Islande
+  "M 440,67 L 453,56 L 467,61 L 459,75 L 445,75 Z",
+  // Péninsule ibérique (override pour la forme)
+  // Afrique
+  "M 449,150 L 421,192 L 419,208 L 440,239 L 477,239 L 512,264 L 525,333 L 531,347 L 568,328 L 573,292 L 587,261 L 613,219 L 597,217 L 579,189 L 573,164 L 547,161 L 517,158 L 504,147 L 475,150 Z",
+  // Asie (masse principale + Sibérie)
+  "M 576,147 L 635,189 L 600,217 L 685,233 L 692,186 L 755,247 L 800,222 L 803,164 L 819,147 L 853,117 L 880,111 L 940,100 L 880,56 L 840,50 L 693,50 L 640,61 L 597,78 L 597,131 L 576,133 Z",
+  // Péninsule arabique
+  "M 576,147 L 635,189 L 613,219 L 579,189 L 573,164 Z",
+  // Péninsule indienne
+  "M 692,186 L 719,186 L 727,231 L 719,258 L 693,228 L 683,228 L 685,233 Z",
+  // Japon
+  "M 840,139 L 853,131 L 861,136 L 856,147 L 843,150 Z",
+  // Australie
+  "M 784,308 L 827,289 L 867,281 L 875,303 L 883,344 L 848,350 L 787,344 L 781,311 Z",
+  // Nouvelle-Zélande (N)
+  "M 899,364 L 909,356 L 915,364 L 907,375 Z",
+  // Antarctique (bande basse)
+  "M 0,475 L 960,475 L 960,500 L 0,500 Z"
+];
+
 function renderWorldMap(clients) {
   const container = document.getElementById("worldMapContainer");
   if (!container) return;
 
   // Calculer les retombées par pays depuis les clients affichés
   const countryData = {};
+  const FALLBACK_WEIGHT = 0.3; // poids réduit pour les présences inférées par région
   (clients || STATE.clientsAffiches || []).forEach(c => {
-    if (c.topPays) {
+    // Données réelles (topPays)
+    if (c.topPays && Object.keys(c.topPays).length > 0) {
       Object.entries(c.topPays).forEach(([pays, val]) => {
         countryData[pays] = (countryData[pays] || 0) + (val || 0);
       });
+    } else {
+      // Fallback : présence inférée par région — poids faible
+      const reg = (c.regionAFP || c.regionDDD || "").toUpperCase();
+      const regCountries = REGION_COUNTRIES[reg] || [];
+      regCountries.forEach(pays => {
+        countryData[pays] = (countryData[pays] || 0) + FALLBACK_WEIGHT;
+      });
     }
-    // Fallback : utiliser la région pour indiquer une présence minimale
-    const reg = c.regionAFP || c.regionDDD || "";
-    const regCountries = REGION_COUNTRIES[reg.toUpperCase()] || [];
-    regCountries.forEach(pays => {
-      if (!countryData[pays]) countryData[pays] = 1;
-    });
   });
 
-  const maxVal = Math.max(1, ...Object.values(countryData));
+  const maxVal = Math.max(0.1, ...Object.values(countryData));
 
+  // Construire les silhouettes de continents
+  const C = "rgba(15,25,41,1)";   // continent fill
+  const S = "rgba(165,180,252,0.10)"; // stroke
+  const continentsSVG = CONTINENT_PATHS.map(d =>
+    `<path d="${d}" fill="${C}" stroke="${S}" stroke-width="0.6" stroke-linejoin="round"/>`
+  ).join("\n  ");
+
+  // Construire les points lumineux
   let dots = "";
-  Object.entries(COUNTRY_COORDS).forEach(([pays, [px, py]]) => {
+  Object.entries(COUNTRY_COORDS).forEach(([pays, [cx, cy]]) => {
     const val = countryData[pays] || 0;
-    if (val === 0) return;
+    if (val < 0.1) return;
     const region = Object.entries(REGION_COUNTRIES).find(([,countries]) => countries.includes(pays))?.[0] || "FR";
     const color  = REGION_COLORS[region] || "#325AFF";
-    const r      = 3 + (val / maxVal) * 7;
-    const alpha  = 0.5 + (val / maxVal) * 0.5;
-    dots += `<circle cx="${px}" cy="${py}" r="${r}" fill="${color}" fill-opacity="${alpha}" class="map-dot" data-pays="${pays}" data-val="${val}">
-      <animate attributeName="r" values="${r};${r + 2};${r}" dur="${1.5 + Math.random()}s" repeatCount="indefinite"/>
-      <title>${pays} : ${val} retombée${val > 1 ? "s" : ""}</title>
+    const norm   = val / maxVal;
+    // Radius : 1.5 minimum, 4 maximum dans l'espace 960×500
+    const r      = 1.5 + norm * 2.5;
+    const rPulse = r + 1.2;
+    const alpha  = 0.5 + norm * 0.5;
+    const dur    = (1.4 + Math.random() * 1.2).toFixed(2);
+    dots += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" fill-opacity="${alpha}">
+      <animate attributeName="r" values="${r};${rPulse};${r}" dur="${dur}s" repeatCount="indefinite"/>
+      <animate attributeName="fill-opacity" values="${alpha};${Math.min(1,alpha+0.25)};${alpha}" dur="${dur}s" repeatCount="indefinite"/>
+      <title>${pays}${val >= 1 ? ` : ${Math.round(val)} retombée${val > 1 ? 's' : ''}` : ' (présence régionale)'}</title>
     </circle>`;
   });
 
-  container.innerHTML = `
-<svg viewBox="0 0 100 75" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:160px;display:block;background:#060A14;border-radius:var(--radius-md);">
-  <!-- Continents simplifiés (silhouettes approx) -->
-  <!-- Amérique du Nord -->
-  <path d="M5,20 L28,18 L30,30 L25,42 L20,50 L10,45 L5,35Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
-  <!-- Amérique du Sud -->
-  <path d="M22,48 L33,46 L35,55 L32,68 L26,72 L20,65 L19,54Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
-  <!-- Europe -->
-  <path d="M44,28 L57,26 L57,34 L54,38 L50,40 L45,38 L43,33Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
-  <!-- Afrique -->
-  <path d="M46,41 L60,40 L62,48 L59,62 L55,68 L48,65 L44,55 L45,47Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
-  <!-- Asie -->
-  <path d="M58,22 L88,20 L90,34 L85,42 L80,50 L72,55 L65,50 L60,42 L57,32Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
-  <!-- Océanie -->
-  <path d="M74,58 L85,56 L88,63 L84,68 L76,68 L72,62Z" fill="#0F1929" stroke="rgba(165,180,252,0.08)" stroke-width="0.3"/>
+  container.innerHTML = `<svg viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet"
+    xmlns="http://www.w3.org/2000/svg"
+    style="width:100%;height:auto;display:block;background:#060A14;border-radius:var(--radius-md);">
+  <!-- Graticule léger (lignes de longitude/latitude) -->
+  <line x1="0" y1="250" x2="960" y2="250" stroke="rgba(165,180,252,0.04)" stroke-width="0.5"/>
+  <line x1="480" y1="0" x2="480" y2="500" stroke="rgba(165,180,252,0.04)" stroke-width="0.5"/>
+  <!-- Continents -->
+  ${continentsSVG}
+  <!-- Points lumineux -->
   ${dots}
 </svg>`;
 }
