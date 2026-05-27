@@ -2570,6 +2570,23 @@ const monthKey = (iso) => {
 };
 
 function loadData() {
+  // 0. Mode hors-ligne : données intégrées dans le fichier HTML (dashboard-local.html)
+  if (window._LOCAL_DATA_ENC) {
+    const role     = sessionStorage.getItem("ddd_role") || "ADMIN";
+    const envelope = (role === "INTERNAL" && window._LOCAL_DATA_ENC_INTERNAL)
+                     ? window._LOCAL_DATA_ENC_INTERNAL
+                     : window._LOCAL_DATA_ENC;
+    decryptData(envelope)
+      .then(data => {
+        STATE.donnees = data;
+        normalizeAllClients();
+        populateRegionFilter();
+        renderAll();
+        showDataSourceBadge("fallback");
+      })
+      .catch(err => console.warn("[AFP DDD] Inline decrypt failed:", err.message));
+    return;
+  }
   // 1. localStorage override (import manuel ou ajout de rapport)
   const stored = localStorage.getItem("ddd_dashboard_data");
   if (stored) {
