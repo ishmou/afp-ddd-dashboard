@@ -2372,6 +2372,14 @@ table.clients-table {
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 12l3-4 3 2.5 3-5 3 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 14h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       <span data-i18n="nav_performance">Performance</span>
     </a>
+    <a class="nav-item" href="#mediaSection" data-section="mediaSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><path d="M2 8h12M8 2c2 1.8 2.8 4 2.8 6S10 12.2 8 14M8 2C6 3.8 5.2 6 5.2 8S6 12.2 8 14" stroke="currentColor" stroke-width="1.2"/></svg>
+      <span data-i18n="nav_media">Couverture média</span>
+    </a>
+    <a class="nav-item" href="#funnelSection" data-section="funnelSection">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3h12l-4 5v4.5L6 14V8L2 3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+      <span data-i18n="nav_funnel">Entonnoir</span>
+    </a>
     <a class="nav-item" href="#clientsSection" data-section="clientsSection">
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/><rect x="2" y="7.1" width="12" height="1.8" rx="0.9" fill="currentColor"/><rect x="2" y="11.2" width="7" height="1.8" rx="0.9" fill="currentColor" opacity=".4"/></svg>
       <span data-i18n="nav_campaigns">Campagnes</span>
@@ -2610,6 +2618,65 @@ table.clients-table {
         </div>
         <div id="execRankingList"></div>
       </div>
+    </div>
+  </section>
+
+  <!-- COUVERTURE MÉDIA -->
+  <section id="mediaSection">
+    <div class="section-header">
+      <div>
+        <div class="section-title" data-i18n="media_title">Couverture média</div>
+        <div class="section-desc" data-i18n="media_subtitle">Médias et pays touchés par les campagnes filtrées</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="mediaStatStrip">
+      <div class="kpi-card kpi-primary">
+        <div class="kpi-label"><span class="kpi-label-dot"></span><span data-i18n="media_kpi_outlets">Médias uniques</span></div>
+        <div class="kpi-value" id="mediaKpiOutlets">0</div>
+      </div>
+      <div class="kpi-card kpi-views">
+        <div class="kpi-label"><span class="kpi-label-dot"></span><span data-i18n="media_kpi_countries">Pays touchés</span></div>
+        <div class="kpi-value" id="mediaKpiCountries">0</div>
+      </div>
+      <div class="kpi-card kpi-outlets">
+        <div class="kpi-label"><span class="kpi-label-dot"></span><span data-i18n="media_kpi_reach">Reach cumulé</span></div>
+        <div class="kpi-value" id="mediaKpiReach">0</div>
+      </div>
+      <div class="kpi-card kpi-organic">
+        <div class="kpi-label"><span class="kpi-label-dot"></span><span data-i18n="media_kpi_covered">Campagnes couvertes</span></div>
+        <div class="kpi-value" id="mediaKpiCovered">0</div>
+      </div>
+    </div>
+
+    <div class="intel-grid">
+      <div class="intel-panel">
+        <div class="intel-panel-title" data-i18n="media_top_outlets">Top médias par reach</div>
+        <div id="topMediasList"></div>
+      </div>
+      <div class="intel-panel">
+        <div class="intel-panel-title" data-i18n="media_top_countries">Top pays par retombées</div>
+        <div id="topPaysList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENTONNOIR D'AUDIENCE -->
+  <section id="funnelSection">
+    <div class="section-header">
+      <div>
+        <div class="section-title" data-i18n="funnel_title">Entonnoir d'audience</div>
+        <div class="section-desc" data-i18n="funnel_subtitle">Du ciblage email aux retombées presse</div>
+      </div>
+      <div class="funnel-included" id="funnelIncluded"></div>
+    </div>
+
+    <div class="funnel-layout">
+      <div class="funnel-card">
+        <div id="funnelViz"></div>
+        <p class="funnel-caveat" data-i18n="funnel_caveat">Les vues uniques proviennent de l'ensemble des canaux de diffusion, pas uniquement des clics email.</p>
+      </div>
+      <div class="funnel-rail" id="funnelRates"></div>
     </div>
   </section>
 
