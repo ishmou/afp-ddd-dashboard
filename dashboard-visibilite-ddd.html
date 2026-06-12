@@ -518,9 +518,16 @@ section {
   top: 0; left: 0;
   height: 2px;
   width: 100%;
-  background: var(--accent, var(--primary));
-  opacity: 0;
+  background: linear-gradient(90deg, var(--accent, var(--primary)), transparent 70%);
+  opacity: 0.45;
   transition: opacity 0.22s;
+}
+
+.kpi-empty {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
 }
 
 /* Glow latéral au hover */
@@ -1048,6 +1055,10 @@ table.clients-table {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 220px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  position: relative;
 }
 .detail-kpi-grid-sm {
   flex: 1;
@@ -1055,7 +1066,7 @@ table.clients-table {
 }
 @media (max-width: 600px) {
   .detail-radar-layout { flex-direction: column; }
-  .detail-radar-chart canvas { width: 180px !important; height: 180px !important; }
+  .detail-radar-chart { width: 180px; }
 }
 
 .detail-kpi {
@@ -3888,14 +3899,14 @@ function renderKPIs() {
   if (kpiRevEl) {
     kpiRevEl.innerHTML = hasRevenue
       ? new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(revenue) + '<span class="unit">€</span>'
-      : '<span class="unit" style="font-size:16px;">n/d</span>';
+      : '<span class="kpi-empty">—</span>';
   }
   const kpiRevTrend = document.getElementById("kpiRevenueTrend");
   if (kpiRevTrend) {
     const valorised = arr.filter(c => c.prixCampagne != null || c.prixBoost != null).length;
     kpiRevTrend.textContent = hasRevenue
       ? valorised + " campagne" + (valorised > 1 ? "s" : "") + " valorisée" + (valorised > 1 ? "s" : "")
-      : "données non renseignées dans l'Excel";
+      : t("kpi_revenue_nd");
   }
 
   document.getElementById("resultsCount").textContent =
@@ -4186,19 +4197,20 @@ function openDetail(id) {
         }]
       },
       options: {
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: true,
         animation: { duration: 700 },
         scales: {
           r: {
             min: 0, max: 100,
             backgroundColor: 'rgba(50,90,255,0.04)',
-            gridLines: { color: 'rgba(165,180,252,0.1)' },
+            grid: { color: 'rgba(165,180,252,0.1)' },
             angleLines: { color: 'rgba(165,180,252,0.12)' },
             ticks: { display: false, stepSize: 25 },
             pointLabels: { color: '#8B98B8', font: { family: 'Inter', size: 10 } }
           }
         },
-        plugins: { legend: { display: false }, tooltip: { enabled: true } }
+        plugins: { legend: { display: false }, tooltip: glassTooltip() }
       }
     });
   })();
@@ -4217,6 +4229,22 @@ function closeDetail() {
 }
 
 // ============ CHARTS ============
+/** Config tooltip partagée — style glass dark cohérent avec les cartes */
+function glassTooltip(extra = {}) {
+  return Object.assign({
+    backgroundColor: "rgba(15,25,41,0.96)",
+    borderColor: "rgba(165,180,252,0.15)",
+    borderWidth: 1,
+    padding: 12,
+    cornerRadius: 8,
+    titleColor: "#EEF2FF",
+    bodyColor: "#8B98B8",
+    titleFont: { family: "Inter", weight: "600" },
+    bodyFont: { family: "Inter" },
+    displayColors: false
+  }, extra);
+}
+
 function renderMonthlyChart(metric = "vues") {
   const ctx = document.getElementById("monthlyChart");
   const arr = STATE.clientsAffiches;
@@ -4237,9 +4265,9 @@ function renderMonthlyChart(metric = "vues") {
   const data = keys.map(k => buckets[k][metric]);
 
   const metricLabels = {
-    vues: "Vues uniques cumulées",
-    emails: "Emails ciblés cumulés",
-    campagnes: "Nombre de campagnes"
+    vues: t("monthly_views"),
+    emails: t("monthly_emails"),
+    campagnes: t("monthly_campaigns")
   };
 
   if (STATE.charts.monthly) STATE.charts.monthly.destroy();
@@ -4252,12 +4280,21 @@ function renderMonthlyChart(metric = "vues") {
         label: metricLabels[metric],
         data: data,
         borderColor: "#325AFF",
-        backgroundColor: "rgba(50, 90, 255, 0.08)",
+        backgroundColor: (context) => {
+          const { ctx: c2d, chartArea } = context.chart;
+          if (!chartArea) return "rgba(50, 90, 255, 0.08)";
+          const g = c2d.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          g.addColorStop(0, "rgba(50, 90, 255, 0.22)");
+          g.addColorStop(1, "rgba(50, 90, 255, 0)");
+          return g;
+        },
         borderWidth: 2,
         fill: true,
         tension: 0.3,
         pointBackgroundColor: "#325AFF",
-        pointRadius: 4,
+        pointBorderColor: "rgba(238,242,255,0.9)",
+        pointBorderWidth: 1.5,
+        pointRadius: 3,
         pointHoverRadius: 6
       }]
     },
@@ -4266,15 +4303,11 @@ function renderMonthlyChart(metric = "vues") {
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          backgroundColor: "#1a1a1a",
-          padding: 12,
-          titleFont: { family: "Inter", weight: "600" },
-          bodyFont: { family: "Inter" },
+        tooltip: glassTooltip({
           callbacks: {
-            label: (ctx) => metricLabels[metric] + ": " + new Intl.NumberFormat("fr-FR").format(ctx.parsed.y)
+            label: (ctx) => metricLabels[metric] + ": " + fmtNum(ctx.parsed.y)
           }
-        }
+        })
       },
       scales: {
         x: {
@@ -4309,12 +4342,12 @@ function renderCompChart(metric = "vues") {
     tauxClic: "tauxClic"
   };
   const labels = {
-    vues: "Views",
-    totalVis: "Total Pick-ups",
-    organic: "Pick-ups",
-    partnerships: "Media Boost",
-    tauxOuverture: "Taux d'ouverture (%)",
-    tauxClic: "Taux de clic (%)"
+    vues: t("comp_views"),
+    totalVis: t("comp_total"),
+    organic: t("comp_organic"),
+    partnerships: t("comp_partnerships"),
+    tauxOuverture: t("comp_open") + " (%)",
+    tauxClic: t("comp_clic") + " (%)"
   };
 
   const field = metricMap[metric];
@@ -4331,8 +4364,9 @@ function renderCompChart(metric = "vues") {
       datasets: [{
         label: labels[metric],
         data: sorted.map(c => c[field]),
-        backgroundColor: "#325AFF",
-        borderRadius: 4,
+        backgroundColor: "rgba(50,90,255,0.85)",
+        hoverBackgroundColor: "#4F6EF7",
+        borderRadius: 6,
         barThickness: 18
       }]
     },
@@ -4342,14 +4376,15 @@ function renderCompChart(metric = "vues") {
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          backgroundColor: "#1a1a1a",
-          padding: 12,
-          titleFont: { family: "Inter", weight: "600" },
+        tooltip: glassTooltip({
           callbacks: {
-            label: (ctx) => labels[metric] + ": " + (metric.includes("taux") ? ctx.parsed.x.toFixed(2).replace(".", ",") + " %" : new Intl.NumberFormat("fr-FR").format(ctx.parsed.x))
+            title: (items) => {
+              const c = sorted[items[0].dataIndex];
+              return c ? c.nom + (c.titreCampagne ? " — " + c.titreCampagne : "") : items[0].label;
+            },
+            label: (ctx) => labels[metric] + ": " + (metric.includes("taux") ? fmtPct(ctx.parsed.x) : fmtNum(ctx.parsed.x))
           }
-        }
+        })
       },
       scales: {
         x: {
