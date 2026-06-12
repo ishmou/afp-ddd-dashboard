@@ -23,7 +23,6 @@
 ║  │    ├── #clientsSection         Tableau des campagnes + filtres            ║
 ║  │    ├── #detailPanel            Panneau de détail (slide-in)              ║
 ║  │    ├── #mgmtSection            Import/Export données                      ║
-║  │    ├── #aiSection              Requêtes IA (Anthropic API)               ║
 ║  │    └── Modals overlay          (addModal, oneDriveModal, etc.)           ║
 ║  │                                                                           ║
 ║  └── <script>                                                                ║
@@ -1675,158 +1674,6 @@ table.clients-table {
   color: #fff;
 }
 
-/* ============ AI QUERY ============ */
-.ai-card {
-  background: var(--bg-card);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-}
-
-.ai-key-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 20px;
-  padding: 14px 16px;
-  background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--glass-border);
-}
-
-.ai-key-row label {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--gray-600);
-  white-space: nowrap;
-}
-
-.ai-key-row input {
-  flex: 1;
-  padding: 7px 10px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-
-.ai-key-row input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
-}
-
-.ai-key-status {
-  font-size: 11px;
-  color: var(--gray-500);
-  font-family: var(--font-mono);
-}
-
-.ai-key-status.ok { color: var(--accent-green); }
-
-.ai-question-area {
-  display: flex;
-  gap: 10px;
-}
-
-.ai-question-input {
-  flex: 1;
-  padding: 11px 14px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  background: var(--bg-elevated);
-}
-
-.ai-question-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
-}
-
-.ai-submit {
-  padding: 11px 18px;
-  background: var(--primary);
-  color: #fff;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 13px;
-  transition: background 0.15s;
-}
-
-.ai-submit:hover { background: var(--primary-hover); }
-.ai-submit:disabled { background: var(--gray-100); color: var(--text-muted); cursor: not-allowed; }
-
-.ai-suggestions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.ai-suggestion {
-  padding: 6px 13px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--glass-border);
-  border-radius: 100px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  transition: all 0.15s;
-}
-
-.ai-suggestion:hover {
-  background: var(--primary-soft);
-  border-color: rgba(255,92,26,0.4);
-  color: var(--text-accent);
-}
-
-.ai-response {
-  margin-top: 24px;
-  padding: 20px;
-  background: var(--bg-elevated);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--gray-600);
-  min-height: 60px;
-  white-space: pre-wrap;
-  border: 1px solid var(--glass-border);
-}
-
-.ai-response.empty {
-  color: var(--gray-400);
-  font-style: italic;
-}
-
-.ai-response.error {
-  background: rgba(244,96,78,0.07);
-  border-color: rgba(244,96,78,0.25);
-  color: #F08084;
-}
-
-.ai-loading {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.ai-loading span {
-  width: 6px;
-  height: 6px;
-  background: var(--primary);
-  border-radius: 50%;
-  animation: dotPulse 1.4s infinite ease-in-out both;
-}
-
-.ai-loading span:nth-child(2) { animation-delay: 0.2s; }
-.ai-loading span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes dotPulse {
-  0%, 80%, 100% { transform: scale(0.5); opacity: 0.5; }
-  40% { transform: scale(1); opacity: 1; }
-}
-
 /* ============ MODAL ============ */
 .modal-overlay {
   position: fixed;
@@ -2468,10 +2315,6 @@ table.clients-table {
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".5"/><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.4"/></svg>
       <span data-i18n="nav_data">Données</span>
     </a>
-    <a class="nav-item" href="#aiSection" data-section="aiSection">
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.3 3.2L13 6l-2.8 2.7L11 12.5 8 10.8l-3 1.7.8-3.8L3 6l3.7-.8L8 1.5z" fill="currentColor" opacity=".75"/></svg>
-      <span data-i18n="nav_ai">Requêtes IA</span>
-    </a>
   </div>
   <div class="sidebar-footer">
     <div class="sidebar-source">
@@ -2801,38 +2644,6 @@ table.clients-table {
     </div>
     <div class="chart-card" style="overflow:auto;">
       <div id="regionHeatmap"></div>
-    </div>
-  </section>
-
-  <!-- AI QUERY -->
-  <section id="aiSection">
-    <div class="section-header">
-      <div>
-        <div class="section-title" data-i18n="ai_title">Interroge tes données</div>
-        <div class="section-desc" data-i18n="ai_desc">Pose une question en langage naturel, Claude Haiku répond à partir des données chargées</div>
-      </div>
-    </div>
-    <div class="ai-card">
-      <div class="ai-key-row">
-        <label for="apiKey" data-i18n="ai_api_label">Clé API Anthropic</label>
-        <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
-        <span class="ai-key-status" id="keyStatus" data-i18n="ai_key_not_set">Non renseignée</span>
-      </div>
-
-      <div class="ai-question-area">
-        <input type="text" class="ai-question-input" id="aiQuestion" placeholder="Quel client a le mieux performé ce trimestre ?" data-i18n-ph="ai_question_placeholder">
-        <button class="ai-submit" id="aiSubmit" data-i18n="ai_submit">Envoyer</button>
-      </div>
-
-      <div class="ai-suggestions" id="aiSuggestions">
-        <button class="ai-suggestion" data-i18n="ai_s1">Quel client a le mieux performé ce trimestre ?</button>
-        <button class="ai-suggestion" data-i18n="ai_s2">Quels médias reviennent le plus souvent toutes campagnes confondues ?</button>
-        <button class="ai-suggestion" data-i18n="ai_s3">Y a-t-il une saisonnalité dans les pics de reprise ?</button>
-        <button class="ai-suggestion" data-i18n="ai_s4">Compare les performances MENA et FR</button>
-        <button class="ai-suggestion" data-i18n="ai_s5">Quels angles éditoriaux sont les plus porteurs ?</button>
-      </div>
-
-      <div class="ai-response empty" id="aiResponse" data-i18n="ai_response_empty">La réponse s'affichera ici en streaming.</div>
     </div>
   </section>
 
@@ -4752,29 +4563,6 @@ function bindEvents() {
     }
   });
 
-  // AI
-  document.getElementById("apiKey").addEventListener("input", (e) => {
-    sessionStorage.setItem("ddd_api_key", e.target.value);
-    updateKeyStatus();
-  });
-  document.getElementById("aiSubmit").addEventListener("click", submitAI);
-  document.getElementById("aiQuestion").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") submitAI();
-  });
-  document.querySelectorAll(".ai-suggestion").forEach(b => {
-    b.addEventListener("click", () => {
-      document.getElementById("aiQuestion").value = b.textContent;
-      submitAI();
-    });
-  });
-
-  // Restore API key from sessionStorage
-  const sk = sessionStorage.getItem("ddd_api_key");
-  if (sk) {
-    document.getElementById("apiKey").value = sk;
-    updateKeyStatus();
-  }
-
   // Header gen date
   const today = new Date();
   document.getElementById("genInfo").textContent =
@@ -4802,15 +4590,14 @@ function bindEvents() {
   });
 
   // Sidebar nav — active state on scroll
-  const sectionIds = ["overview", "clientsSection", "comparative", "mediaSection", "funnelSection", "management", "timelineSection", "heatmapSection", "aiSection"];
+  const sectionIds = ["overview", "clientsSection", "comparative", "mediaSection", "funnelSection", "management", "timelineSection", "heatmapSection"];
   const sectionTitles = {
     overview: () => t("section_title_overview"),
     comparative: () => t("section_title_comparative"),
     clientsSection: () => t("section_title_clients"),
     mediaSection: () => t("section_title_media"),
     funnelSection: () => t("section_title_funnel"),
-    management: () => t("section_title_management"),
-    aiSection: () => t("section_title_ai")
+    management: () => t("section_title_management")
   };
   const navItems = document.querySelectorAll(".nav-item[data-section]");
   const headerTitle = document.getElementById("headerTitle");
@@ -4832,20 +4619,6 @@ function bindEvents() {
   updateActiveNav();
 }
 
-function updateKeyStatus() {
-  const v = document.getElementById("apiKey").value;
-  const st = document.getElementById("keyStatus");
-  if (v && v.startsWith("sk-ant-")) {
-    st.textContent = t("ai_key_loaded");
-    st.classList.add("ok");
-  } else if (v) {
-    st.textContent = t("ai_key_bad_format");
-    st.classList.remove("ok");
-  } else {
-    st.textContent = t("ai_key_not_set");
-    st.classList.remove("ok");
-  }
-}
 
 // ============ ADD REPORT ============
 function saveNewReport() {
@@ -5140,124 +4913,6 @@ function showNotif(msg) {
   n.textContent = msg;
   n.classList.add("show");
   setTimeout(() => n.classList.remove("show"), 2600);
-}
-
-// ============ ANTHROPIC API ============
-async function submitAI() {
-  const key = document.getElementById("apiKey").value.trim();
-  const q = document.getElementById("aiQuestion").value.trim();
-  const out = document.getElementById("aiResponse");
-
-  if (!key) {
-    out.textContent = "Veuillez coller votre clé API Anthropic ci-dessus avant d'envoyer une question.";
-    out.classList.remove("empty");
-    out.classList.add("error");
-    return;
-  }
-  if (!q) {
-    out.textContent = "Posez une question, par exemple : quel client a le mieux performé ce trimestre ?";
-    out.classList.remove("empty");
-    out.classList.add("error");
-    return;
-  }
-
-  out.classList.remove("empty", "error");
-  out.innerHTML = '<div class="ai-loading"><span></span><span></span><span></span></div>';
-
-  // Build compact dataset for context
-  const compact = {
-    genereeLe: STATE.donnees.genereeLe,
-    nbClients: STATE.donnees.clients.length,
-    clients: STATE.donnees.clients.map(c => ({
-      nom: c.nom,
-      titreCampagne: c.titreCampagne,
-      regionAFP: c.regionAFP || c.regionDDD,
-      datePublication: c.datePublication,
-      boost: c.boost,
-      emailsCibles: c.emailsCibles,
-      tauxOuverture: c.tauxOuverture,
-      tauxClic: c.tauxClic,
-      vuesUniques: c.vuesUniques,
-      telechargementsTexte: c.telechargementsTexte,
-      telechargementsPhoto: c.telechargementsPhoto,
-      pickups: c.pickups,
-      mediaBoost: c.mediaBoost,
-      totalPickups: c.totalPickups,
-      uniqueMediaOutlets: c.uniqueMediaOutlets,
-      pressroomsAFP: c.pressroomsAFP,
-      feedsAFP: c.feedsAFP,
-      visibilityScore: c.visibilityScore,
-      engagementScore: c.engagementScore,
-      mediaReachScore: c.mediaReachScore,
-      thematiques: c.thematiques,
-      tonalite: c.tonalite,
-      topMedias: c.topMedias ? c.topMedias.map(m => m.nom) : null,
-      langues: c.langues,
-      typeContenu: c.typeContenu
-    }))
-  };
-
-  const systemPrompt = `Tu es un analyste de visibilité presse pour l'équipe DDD (Distribution et Diffusion Digitale) de l'AFP. Tu réponds en français, de façon concise, professionnelle et factuelle. Tu te bases STRICTEMENT sur l'objet JSON de données fourni. Distingue toujours les retombées organiques (pickups) du Media Boost AFP (mediaBoost). Le champ totalPickups = pickups + mediaBoost. Les régions sont des régions AFP. Si une information n'est pas disponible (valeur null ou n/d), tu le dis clairement. Tu cites les noms de clients exactement comme ils apparaissent. Tu n'inventes aucun chiffre. Tu structures ta réponse en quelques phrases ou points courts.`;
-
-  const userMsg = `Voici les données de visibilité disponibles :\n\n\`\`\`json\n${JSON.stringify(compact, null, 2)}\n\`\`\`\n\nQuestion : ${q}`;
-
-  try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": key,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true"
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5",
-        max_tokens: 1500,
-        stream: true,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userMsg }]
-      })
-    });
-
-    if (!resp.ok) {
-      const txt = await resp.text();
-      out.classList.add("error");
-      out.textContent = "Erreur API (" + resp.status + ") : " + txt;
-      return;
-    }
-
-    out.textContent = "";
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let fullText = "";
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop();
-
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const payload = line.slice(6);
-        if (payload === "[DONE]") continue;
-        try {
-          const evt = JSON.parse(payload);
-          if (evt.type === "content_block_delta" && evt.delta && evt.delta.text) {
-            fullText += evt.delta.text;
-            out.textContent = fullText;
-          }
-        } catch (e) {
-          // ignore parse errors on partial chunks
-        }
-      }
-    }
-  } catch (err) {
-    out.classList.add("error");
-    out.textContent = "Erreur réseau ou CORS : " + err.message + "\n\nNote : l'API Anthropic exige le header anthropic-dangerous-direct-browser-access. Vérifie la clé et la connexion.";
-  }
 }
 
 // ============ INIT ============
