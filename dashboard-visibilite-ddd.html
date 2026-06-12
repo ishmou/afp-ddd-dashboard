@@ -4551,6 +4551,8 @@ function renderAll() {
   renderMonthlyChart(STATE.monthlyMetric || "vues");
   renderCompChart(STATE.compMetric || "vues");
   renderExecutivePanel();
+  renderMediaIntel();
+  renderFunnel();
   renderTimeline();
   renderHeatmap();
   applyRoleVisibility();
@@ -4705,11 +4707,13 @@ function bindEvents() {
   });
 
   // Sidebar nav — active state on scroll
-  const sectionIds = ["overview", "comparative", "clientsSection", "timelineSection", "heatmapSection", "management", "aiSection"];
+  const sectionIds = ["overview", "clientsSection", "comparative", "mediaSection", "funnelSection", "management", "timelineSection", "heatmapSection", "aiSection"];
   const sectionTitles = {
     overview: () => t("section_title_overview"),
     comparative: () => t("section_title_comparative"),
     clientsSection: () => t("section_title_clients"),
+    mediaSection: () => t("section_title_media"),
+    funnelSection: () => t("section_title_funnel"),
     management: () => t("section_title_management"),
     aiSection: () => t("section_title_ai")
   };
@@ -5630,6 +5634,201 @@ function renderHeatmap() {
 
   html += `</tbody></table>`;
   container.innerHTML = html;
+}
+
+// ============ COUVERTURE MÉDIA ============
+function emptyStateRich(titleKey, hintKey) {
+  return `<div class="empty-state-rich">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" stroke="currentColor"/><path d="M21 21l-4.3-4.3M8 11h6" stroke="currentColor"/></svg>
+    <div class="es-title">${t(titleKey)}</div>
+    <div class="es-hint">${t(hintKey)}</div>
+  </div>`;
+}
+
+function aggregateMedia(list) {
+  const outlets = new Map();
+  const countries = new Map();
+  let covered = 0;
+  list.forEach(c => {
+    const hasMedias = Array.isArray(c.topMedias) && c.topMedias.length > 0;
+    const hasPays = c.topPays && typeof c.topPays === "object" && Object.keys(c.topPays).length > 0;
+    if (hasMedias || hasPays) covered++;
+    if (hasMedias) c.topMedias.forEach(m => {
+      if (!m || !m.nom) return;
+      const k = String(m.nom).trim().toLowerCase();
+      if (!k) return;
+      const e = outlets.get(k) || { nom: String(m.nom).trim(), pays: m.pays || "", reach: 0, count: 0 };
+      e.reach += Number(m.reach) || 0;
+      e.count++;
+      if (!e.pays && m.pays) e.pays = m.pays;
+      outlets.set(k, e);
+    });
+    if (hasPays) Object.entries(c.topPays).forEach(([p, v]) => {
+      const key = String(p).trim();
+      if (!key) return;
+      countries.set(key, (countries.get(key) || 0) + (Number(v) || 0));
+    });
+  });
+  return { outlets, countries, covered };
+}
+
+function renderMediaIntel() {
+  const outletsEl = document.getElementById("topMediasList");
+  const paysEl = document.getElementById("topPaysList");
+  if (!outletsEl || !paysEl) return;
+
+  const list = STATE.clientsAffiches || [];
+  const { outlets, countries, covered } = aggregateMedia(list);
+
+  animateCounter(document.getElementById("mediaKpiOutlets"), outlets.size, 800);
+  animateCounter(document.getElementById("mediaKpiCountries"), countries.size, 800);
+  const totalReach = Array.from(outlets.values()).reduce((a, o) => a + o.reach, 0);
+  animateCounter(document.getElementById("mediaKpiReach"), totalReach, 1000);
+  document.getElementById("mediaKpiCovered").textContent = covered + " / " + list.length;
+
+  if (covered === 0) {
+    outletsEl.innerHTML = emptyStateRich("media_empty_title", "media_empty_hint");
+    paysEl.innerHTML = emptyStateRich("media_empty_title", "media_empty_hint");
+    return;
+  }
+
+  // Top médias (par reach, fallback nb campagnes)
+  const topOutlets = Array.from(outlets.values())
+    .sort((a, b) => b.reach - a.reach || b.count - a.count)
+    .slice(0, 12);
+  const maxReach = Math.max(1, ...topOutlets.map(o => o.reach));
+  outletsEl.innerHTML = topOutlets.length ? topOutlets.map((o, i) => `
+    <div class="rankbar-row">
+      <div class="rankbar-pos">${i + 1}</div>
+      <div class="rankbar-main">
+        <div class="rankbar-label">${escapeHtml(o.nom)}
+          ${o.pays ? `<span class="country-badge">${escapeHtml(String(o.pays))}</span>` : ""}
+          <span class="rankbar-sub">${o.count} ${t("media_campaigns_count")}</span>
+        </div>
+        <div class="rankbar-track"><div class="rankbar-fill" style="width:${Math.max(3, Math.round(o.reach / maxReach * 100))}%"></div></div>
+      </div>
+      <div class="rankbar-value">${o.reach > 0 ? fmtNum(o.reach) : "—"}</div>
+    </div>`).join("") : emptyStateRich("media_empty_title", "media_empty_hint");
+
+  // Top pays (par retombées)
+  const REGION_PALETTE = ["#325AFF", "#F59E0B", "#06B6D4", "#8B5CF6", "#6366F1", "#EC4899", "#10B981"];
+  const topCountries = Array.from(countries.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+  const totalCountries = Array.from(countries.values()).reduce((a, v) => a + v, 0) || 1;
+  const maxCountry = Math.max(1, ...topCountries.map(c => c[1]));
+  paysEl.innerHTML = topCountries.length ? topCountries.map(([p, v], i) => `
+    <div class="rankbar-row">
+      <div class="rankbar-pos">${i + 1}</div>
+      <div class="rankbar-main">
+        <div class="rankbar-label">${escapeHtml(p)}</div>
+        <div class="rankbar-track"><div class="rankbar-fill" style="--rb-color:${REGION_PALETTE[i % REGION_PALETTE.length]};width:${Math.max(3, Math.round(v / maxCountry * 100))}%"></div></div>
+      </div>
+      <div class="rankbar-value">${fmtNum(v)}<span class="rankbar-share">${(v / totalCountries * 100).toFixed(1)} %</span></div>
+    </div>`).join("") : emptyStateRich("media_empty_title", "media_empty_hint");
+}
+
+// ============ ENTONNOIR D'AUDIENCE ============
+function aggregateFunnel(list) {
+  const withEmails = list.filter(c => c.emailsCibles != null && c.emailsCibles > 0);
+  let emails = 0, opens = 0, clicks = 0, views = 0, pickups = 0;
+  withEmails.forEach(c => {
+    emails += c.emailsCibles;
+    if (c.tauxOuverture != null) opens += c.emailsCibles * c.tauxOuverture / 100;
+    if (c.tauxClic != null) clicks += c.emailsCibles * c.tauxClic / 100;
+    if (c.vuesUniques != null) views += c.vuesUniques;
+    if (c.totalPickups != null) pickups += c.totalPickups;
+  });
+  return { n: withEmails.length, emails, opens, clicks, views, pickups, withEmails };
+}
+
+function renderFunnel() {
+  const vizEl = document.getElementById("funnelViz");
+  const ratesEl = document.getElementById("funnelRates");
+  const inclEl = document.getElementById("funnelIncluded");
+  if (!vizEl || !ratesEl) return;
+
+  const list = STATE.clientsAffiches || [];
+  const agg = aggregateFunnel(list);
+  if (inclEl) inclEl.textContent = agg.n + " / " + list.length + " " + t("funnel_included");
+
+  if (agg.n === 0) {
+    vizEl.innerHTML = emptyStateRich("funnel_empty_title", "funnel_empty_hint");
+    ratesEl.innerHTML = "";
+    return;
+  }
+
+  const stages = [
+    { key: "funnel_stage_emails", value: agg.emails, color: "#325AFF" },
+    { key: "funnel_stage_opens", value: agg.opens, color: "#4F6EF7" },
+    { key: "funnel_stage_clicks", value: agg.clicks, color: "#6C5CE7" },
+    { key: "funnel_stage_views", value: agg.views, color: "#8B5CF6", multichannel: true },
+    { key: "funnel_stage_pickups", value: agg.pickups, color: "#06B6D4" }
+  ];
+  const maxV = Math.max(1, ...stages.map(s => s.value));
+
+  // SVG funnel : largeur ∝ sqrt(valeur) pour garder les petits étages lisibles
+  const W = 640, ROW = 64, GAP = 10, LABEL_W = 150, VALUE_W = 110;
+  const bandMax = W - LABEL_W - VALUE_W;
+  const H = stages.length * ROW;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;" role="img" aria-label="${t("funnel_title")}">`;
+  svg += `<defs>` + stages.map((s, i) =>
+    `<linearGradient id="fg${i}" x1="0" y1="0" x2="1" y2="0">
+       <stop offset="0%" stop-color="${s.color}" stop-opacity="0.85"/>
+       <stop offset="100%" stop-color="${s.color}" stop-opacity="0.35"/>
+     </linearGradient>`).join("") + `</defs>`;
+
+  stages.forEach((s, i) => {
+    const y = i * ROW;
+    const w = Math.max(bandMax * 0.04, bandMax * Math.sqrt(s.value / maxV));
+    const x = LABEL_W + (bandMax - w) / 2;
+    svg += `<text x="${LABEL_W - 12}" y="${y + ROW / 2 - 6}" text-anchor="end" fill="#8B98B8" font-size="11" font-family="Inter,sans-serif" font-weight="600">${t(s.key)}</text>`;
+    svg += `<rect x="${x}" y="${y + 8}" width="${w}" height="${ROW - GAP - 16}" rx="6" fill="url(#fg${i})" stroke="${s.color}" stroke-opacity="0.45" stroke-width="1"/>`;
+    svg += `<text x="${W - 8}" y="${y + ROW / 2 - 6}" text-anchor="end" fill="#EEF2FF" font-size="15" font-family="'DM Mono',monospace">${fmtNum(Math.round(s.value))}</text>`;
+    if (i < stages.length - 1) {
+      const next = stages[i + 1];
+      const convLabel = (next.multichannel || s.multichannel)
+        ? "·"
+        : (s.value > 0 ? (next.value / s.value * 100).toFixed(1) + " %" : "—");
+      svg += `<text x="${LABEL_W + bandMax / 2}" y="${y + ROW - 3}" text-anchor="middle" fill="#4A5578" font-size="10" font-family="'DM Mono',monospace">▼ ${convLabel}</text>`;
+    }
+  });
+  svg += `</svg>`;
+  vizEl.innerHTML = svg;
+
+  // Rail latéral : taux pondérés + meilleure conversion
+  const wOpen = agg.emails > 0 ? agg.opens / agg.emails * 100 : null;
+  const wClick = agg.emails > 0 ? agg.clicks / agg.emails * 100 : null;
+  const per1k = agg.emails > 0 ? agg.pickups / agg.emails * 1000 : null;
+
+  let best = null, bestRatio = -1;
+  agg.withEmails.forEach(c => {
+    if (c.emailsCibles >= 1000 && c.totalPickups != null) {
+      const r = c.totalPickups / c.emailsCibles;
+      if (r > bestRatio) { bestRatio = r; best = c; }
+    }
+  });
+
+  ratesEl.innerHTML = `
+    <div class="rate-card">
+      <div class="rate-card-label">${t("funnel_rate_open")}</div>
+      <div class="rate-card-value">${wOpen != null ? fmtPct(wOpen) : "—"}</div>
+    </div>
+    <div class="rate-card">
+      <div class="rate-card-label">${t("funnel_rate_click")}</div>
+      <div class="rate-card-value">${wClick != null ? fmtPct(wClick) : "—"}</div>
+    </div>
+    <div class="rate-card">
+      <div class="rate-card-label">${t("funnel_rate_pickup1k")}</div>
+      <div class="rate-card-value">${per1k != null ? fmtNum(Math.round(per1k * 10) / 10) : "—"}</div>
+    </div>
+    ${best ? `
+    <div class="best-conv-card" onclick="openDetail('${String(best.id).replace(/'/g, "\\'")}')">
+      <div class="rate-card-label">${t("funnel_best_conv")}</div>
+      <div class="best-conv-name">${escapeHtml(best.nom)}</div>
+      <div class="best-conv-meta">${escapeHtml((best.titreCampagne || "").slice(0, 60))} · ${fmtNum(best.totalPickups)} pick-ups</div>
+    </div>` : ""}
+  `;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
