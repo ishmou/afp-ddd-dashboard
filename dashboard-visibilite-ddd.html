@@ -39,7 +39,7 @@
 ║       ├── renderExecPanel()       Executive panel (Chart.js)                 ║
 ║       ├── importExcel()           Import fichier .xlsx                       ║
 ║       ├── syncFromOneDrive()      Sync OneDrive via Graph API               ║
-║       └── checkLogin()            Auth par mot de passe (SHA-256)           ║
+║       └── checkLogin()            Auth par déchiffrement (aucun hash stocké) ║
 ║                                                                              ║
 ║  DATA SOURCE                                                                 ║
 ║  Le dashboard charge data.json au démarrage (fetch relatif).                 ║
@@ -3542,13 +3542,14 @@ function loadFromDataJson() {
     });
 }
 
-// Déchiffre le contenu AES-256-GCM avec le mot de passe du dashboard
-async function decryptData(envelope) {
-  if (!envelope || envelope.v !== 1) throw new Error("Format invalide");
+// Nombre d'itérations PBKDF2 — DOIT correspondre à sync_dashboard.py (PBKDF2_ITERATIONS)
+const PBKDF2_ITERATIONS = 600000;
 
-  // Récupérer le mot de passe depuis la session (saisi au login)
-  const pwd = sessionStorage.getItem("ddd_pwd");
-  if (!pwd) throw new Error("Session expirée — reconnecte-toi");
+// Déchiffre un blob AES-256-GCM avec un mot de passe explicite.
+// Lève une exception si le mot de passe est faux (tag GCM invalide) ou le format incorrect.
+async function decryptEnvelope(envelope, pwd) {
+  if (!envelope || envelope.v !== 1) throw new Error("Format invalide");
+  if (!pwd) throw new Error("Mot de passe manquant");
 
   // Décoder le blob base64
   const raw = Uint8Array.from(atob(envelope.data), c => c.charCodeAt(0));
@@ -3562,19 +3563,26 @@ async function decryptData(envelope) {
     "PBKDF2", false, ["deriveKey"]
   );
   const key = await crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
     keyMaterial,
     { name: "AES-GCM", length: 256 },
     false, ["decrypt"]
   );
 
-  // Déchiffrer
+  // Déchiffrer (AES-GCM authentifie : un mauvais mot de passe lève ici)
   const decrypted = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv },
     key, ciphertext
   );
 
   return JSON.parse(new TextDecoder().decode(decrypted));
+}
+
+// Déchiffre avec le mot de passe stocké en session (saisi au login).
+async function decryptData(envelope) {
+  const pwd = sessionStorage.getItem("ddd_pwd");
+  if (!pwd) throw new Error("Session expirée — reconnecte-toi");
+  return decryptEnvelope(envelope, pwd);
 }
 
 function showDataSourceBadge(source) {
@@ -5070,9 +5078,12 @@ async function syncFromOneDrive() {
 
 // ══ AUTH + RÔLES ══════════════════════════════════════════════════════════
 // ── Système de rôles ─────────────────────────────────────────────────────
+// Aucun hash de mot de passe n'est stocké : le rôle est déterminé en TENTANT
+// de déchiffrer chaque fichier. Le mot de passe n'est jamais exposé, et la seule
+// attaque possible est le brute-force du PBKDF2 (600 000 itérations), pas un
+// hash SHA-256 rapide. Voir audit sécurité.
 const ROLES = {
   ADMIN: {
-    hash:              "a539b84a4eda1a15a0f9e62d4bdbdd9553b0ba35b8dd1b45c7cc4b68c3751403",
     label:             "Accès complet",
     dataFile:          "data.enc.json",
     canViewFinancials: true,
@@ -5082,8 +5093,6 @@ const ROLES = {
     canViewAllClients: true,
   },
   INTERNAL: {
-    // SHA-256("AFPDASHBOARDINTERNAL")
-    hash:              "14593b9b78712074cc2e1e907e2f280c434ca9bd74aa888ecf75adced8bf823e",
     label:             "Vue interne filtrée",
     dataFile:          "data.internal.enc.json",
     canViewFinancials: false,
@@ -5100,39 +5109,70 @@ function can(permission) {
   return ROLES[role]?.[permission] === true;
 }
 
-const _PWD_HASH    = ROLES.ADMIN.hash;  // rétro-compat
 const _SESSION_KEY = "ddd_auth_ok";
 
-async function sha256(str) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+// Récupère les enveloppes chiffrées disponibles (inline hors-ligne, sinon fetch GitHub).
+async function getAuthEnvelopes() {
+  if (window._LOCAL_DATA_ENC) {
+    return {
+      ADMIN:    window._LOCAL_DATA_ENC,
+      INTERNAL: window._LOCAL_DATA_ENC_INTERNAL || null
+    };
+  }
+  const base = window.location.href.replace(/\/[^\/]*$/, "/");
+  const out  = { ADMIN: null, INTERNAL: null };
+  await Promise.all([
+    fetch(base + "data.enc.json?t=" + Date.now())
+      .then(r => r.ok ? r.json() : null).then(e => out.ADMIN = e).catch(() => {}),
+    fetch(base + "data.internal.enc.json?t=" + Date.now())
+      .then(r => r.ok ? r.json() : null).then(e => out.INTERNAL = e).catch(() => {})
+  ]);
+  return out;
 }
 
 async function checkLogin() {
   const input = document.getElementById("loginPwd");
   const errEl = document.getElementById("loginError");
+  const btn   = document.querySelector(".login-btn");
   const val   = input.value;
   if (!val) return;
 
-  const hash = await sha256(val);
+  if (btn) { btn.disabled = true; }
 
-  // ── Détecter le rôle selon le hash ──────────────────────────────────────
-  let matchedRole = null;
-  for (const [roleName, roleConf] of Object.entries(ROLES)) {
-    if (hash === roleConf.hash) { matchedRole = roleName; break; }
+  // ── Déterminer le rôle en tentant de déchiffrer (ADMIN d'abord, puis INTERNAL) ──
+  let matchedRole = null, decrypted = null;
+  try {
+    const env = await getAuthEnvelopes();
+    for (const role of ["ADMIN", "INTERNAL"]) {
+      if (!env[role]) continue;
+      try {
+        decrypted   = await decryptEnvelope(env[role], val);
+        matchedRole = role;
+        break;
+      } catch (_) { /* mauvais mot de passe pour ce fichier — essayer le suivant */ }
+    }
+  } catch (e) {
+    console.warn("[AFP DDD] Auth — récupération des données échouée:", e.message);
   }
+
+  if (btn) { btn.disabled = false; }
 
   if (matchedRole) {
     sessionStorage.setItem(_SESSION_KEY, "1");
-    sessionStorage.setItem("ddd_pwd",  val);          // pour déchiffrement AES
+    sessionStorage.setItem("ddd_pwd",  val);          // clé de déchiffrement AES
     sessionStorage.setItem("ddd_role", matchedRole);  // rôle courant
     document.getElementById("loginScreen").classList.add("hidden");
     input.value = "";
     errEl.classList.remove("show");
     input.classList.remove("error");
-    if (!STATE.donnees || !STATE.donnees.clients.length) {
-      init();
-    }
+    // Réutiliser les données déjà déchiffrées au login
+    STATE.donnees = decrypted;
+    normalizeAllClients();
+    stopLoginCanvas();
+    bindEvents();
+    populateRegionFilter();
+    renderAll();
+    showDataSourceBadge(window._LOCAL_DATA_ENC ? "fallback" : "github");
   } else {
     input.classList.add("error");
     errEl.classList.add("show");
