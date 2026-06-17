@@ -125,6 +125,17 @@
   --glass-border:        rgba(255, 255, 255, 0.07);
   --glass-border-hover:  rgba(255, 255, 255, 0.14);
 
+  /* ── Lignes / fonds dépendant du thème (défauts = sombre) ── */
+  --line:        rgba(255,255,255,0.07);
+  --line-soft:   rgba(255,255,255,0.04);
+  --hover:       rgba(255,255,255,0.04);
+  --track:       rgba(255,255,255,0.08);
+  --map-land:    rgba(255,255,255,0.045);
+  --map-stroke:  rgba(255,255,255,0.07);
+  /* couleurs pour graphiques/SVG lues par THEME() en JS */
+  --chart-grid:  rgba(255,255,255,0.06);
+  --chart-tick:  #8C9098;
+
   /* ── Shadows ── */
   --shadow-sm:      0 1px 2px rgba(0,0,0,0.5);
   --shadow-md:      0 8px 24px -6px rgba(0,0,0,0.5);
@@ -151,6 +162,91 @@
   --font-body:    'Inter', system-ui, -apple-system, sans-serif;
   --font-mono:    'IBM Plex Mono', 'JetBrains Mono', monospace;
 }
+
+/* ══ THÈME CLAIR ══ surcharge des variables ; le mode sombre reste le défaut ══ */
+html[data-theme="light"] {
+  --bg:             #F4F6F9;
+  --bg-base:        #F4F6F9;
+  --bg-surface:     #FFFFFF;
+  --bg-card:        #FFFFFF;
+  --bg-elevated:    #EEF1F6;
+  --bg-subtle:      #FAFBFD;
+  --white:          #FFFFFF;
+  --black:          #14161A;
+
+  --text-primary:   #14161A;
+  --text-secondary: #4A4E57;
+  --text-muted:     #8A8F99;
+  --text-accent:    #C2410C;   /* orange foncé lisible sur blanc */
+
+  --gray-50:        #EEF1F6;
+  --gray-100:       #E4E8EF;
+  --gray-200:       rgba(0,0,0,0.10);
+  --gray-300:       rgba(0,0,0,0.20);
+  --gray-400:       #8A8F99;
+  --gray-500:       #6B7280;
+  --gray-600:       #3A3F49;
+  --gray-700:       #1F2430;
+
+  --glass-bg:            rgba(0,0,0,0.025);
+  --glass-border:        rgba(0,0,0,0.10);
+  --glass-border-hover:  rgba(0,0,0,0.20);
+
+  --line:        rgba(0,0,0,0.09);
+  --line-soft:   rgba(0,0,0,0.06);
+  --hover:       rgba(0,0,0,0.04);
+  --track:       rgba(0,0,0,0.08);
+  --map-land:    rgba(20,30,55,0.07);
+  --map-stroke:  rgba(20,30,55,0.14);
+  --chart-grid:  rgba(0,0,0,0.08);
+  --chart-tick:  #6B7280;
+
+  --shadow-sm:   0 1px 2px rgba(20,30,55,0.08);
+  --shadow-md:   0 8px 24px -8px rgba(20,30,55,0.16);
+  --shadow-lg:   0 24px 64px -12px rgba(20,30,55,0.20);
+  --shadow-glow: 0 0 40px rgba(255,92,26,0.10);
+
+  --primary-soft:  rgba(255, 92, 26, 0.12);
+  --primary-muted: rgba(255, 92, 26, 0.10);
+}
+
+/* Région tags : texte foncé lisible sur fond clair (mode clair) */
+html[data-theme="light"] .region-tag.fr     { background: rgba(77,127,238,0.16);  color: #1E40AF; }
+html[data-theme="light"] .region-tag.mena   { background: rgba(245,166,35,0.18);  color: #92500A; }
+html[data-theme="light"] .region-tag.asia   { background: rgba(43,200,196,0.18);  color: #0E6E6B; }
+html[data-theme="light"] .region-tag.amlat  { background: rgba(240,111,168,0.18); color: #A21D5E; }
+html[data-theme="light"] .region-tag.europe { background: rgba(139,124,246,0.18); color: #5B3FC4; }
+html[data-theme="light"] .region-tag.afr    { background: rgba(229,72,77,0.16);   color: #B11D22; }
+html[data-theme="light"] .region-tag.eng    { background: rgba(60,214,139,0.18);  color: #0F7A47; }
+
+/* Map : géométrie des continents lisible sur blanc */
+html[data-theme="light"] .geo-card { background:
+  radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,92,26,0.05), transparent 70%), #FFFFFF; }
+html[data-theme="light"] .geo-label { fill: #14161A; stroke: rgba(255,255,255,0.85); }
+
+/* Scrollbars en mode clair */
+html[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); }
+html[data-theme="light"] body { scrollbar-color: rgba(0,0,0,0.25) transparent; }
+
+/* Polish mode clair : dividers / surfaces qui utilisaient des blancs littéraux */
+html[data-theme="light"] .clients-table tbody td,
+html[data-theme="light"] .geo-rail-row,
+html[data-theme="light"] .rankbar-row,
+html[data-theme="light"] .exec-rank-row,
+html[data-theme="light"] .media-list li { border-color: var(--line-soft); }
+html[data-theme="light"] .clients-table tbody tr:hover { background: var(--hover); }
+html[data-theme="light"] .clients-table tbody tr.selected { background: var(--primary-muted); }
+html[data-theme="light"] .exec-panel { background: var(--bg-card); }
+html[data-theme="light"] .exec-metric { background: var(--bg-elevated); border-color: var(--glass-border); }
+html[data-theme="light"] .exec-metric.hero { background: linear-gradient(135deg, rgba(255,92,26,0.10), rgba(255,92,26,0.02)); }
+html[data-theme="light"] .exec-ranking { background: var(--bg-subtle); }
+html[data-theme="light"] .geo-rail-bar,
+html[data-theme="light"] .rankbar-track,
+html[data-theme="light"] .exec-score-bar,
+html[data-theme="light"] .exec-rank-score-bar,
+html[data-theme="light"] .bar-row .bar-track { background: var(--track); }
+html[data-theme="light"] .clients-table thead th { color: var(--gray-500); }
+html[data-theme="light"] .geo-bubble-halo { opacity: 0.20; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -475,6 +571,26 @@ button:focus-visible, .nav-item:focus-visible, a:focus-visible {
   align-items: center;
   gap: 10px;
 }
+
+/* ── Theme toggle (clair/sombre) ── */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+.theme-toggle:hover { color: var(--text-accent); border-color: rgba(255,92,26,0.4); }
+.theme-toggle .theme-icon-sun  { display: none; }
+.theme-toggle .theme-icon-moon { display: block; }
+html[data-theme="light"] .theme-toggle .theme-icon-sun  { display: block; }
+html[data-theme="light"] .theme-toggle .theme-icon-moon { display: none; }
 
 /* ── Language toggle ── */
 .lang-toggle {
@@ -2278,8 +2394,8 @@ section { margin-bottom: 34px; }
 .geo-svg { width: 100%; height: auto; display: block; max-height: 460px; }
 
 .map-land {
-  fill: rgba(255,255,255,0.045);
-  stroke: rgba(255,255,255,0.07);
+  fill: var(--map-land);
+  stroke: var(--map-stroke);
   stroke-width: 0.4;
   stroke-linejoin: round;
 }
@@ -2424,6 +2540,15 @@ section { margin-bottom: 34px; }
 .geo-rail-bar > span { display: block; height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
 .geo-rail-val { font-family: var(--font-mono); font-size: 12.5px; color: var(--text-secondary); text-align: right; }
 </style>
+<script>
+  // Applique le thème AVANT le rendu (évite le flash) ; sombre par défaut
+  (function () {
+    try {
+      var th = localStorage.getItem("ddd_theme");
+      document.documentElement.setAttribute("data-theme", th === "light" ? "light" : "dark");
+    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+  })();
+</script>
 </head>
 <body>
 
@@ -2518,6 +2643,10 @@ section { margin-bottom: 34px; }
     </div>
     <div class="header-actions">
       <div class="gen-info" id="genInfo">—</div>
+      <button class="theme-toggle" id="themeToggle" type="button" onclick="toggleTheme()" title="Mode clair / sombre" aria-label="Basculer le thème clair/sombre">
+        <svg class="theme-icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="theme-icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      </button>
       <div class="lang-toggle" id="langToggle" title="Switch language / Changer la langue">
         <button class="lang-btn active" data-lang="fr" onclick="setLang('fr')">FR</button>
         <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
@@ -2887,7 +3016,6 @@ section { margin-bottom: 34px; }
             <option value="AMLAT">AMLAT</option>
             <option value="EUROPE">EUROPE</option>
             <option value="AFR">AFR</option>
-            <option value="ENG">ENG (anglophone)</option>
           </select>
         </div>
         <div class="form-field">
@@ -4303,10 +4431,10 @@ function openDetail(id) {
           r: {
             min: 0, max: 100,
             backgroundColor: 'rgba(255,92,26,0.04)',
-            grid: { color: 'rgba(255,255,255,0.08)' },
-            angleLines: { color: 'rgba(255,255,255,0.10)' },
+            grid: { color: THEME().grid },
+            angleLines: { color: THEME().grid },
             ticks: { display: false, stepSize: 25 },
-            pointLabels: { color: '#A0A3AC', font: { family: 'Inter', size: 10 } }
+            pointLabels: { color: THEME().axisLabel, font: { family: 'Inter', size: 10 } }
           }
         },
         plugins: { legend: { display: false }, tooltip: glassTooltip() }
@@ -4327,17 +4455,51 @@ function closeDetail() {
   renderTable();
 }
 
+// ============ THÈME (clair / sombre) ============
+/** Couleurs dépendantes du thème pour les rendus JS (charts, SVG, heatmap).
+ *  Les valeurs sombres = identiques à l'origine (mode sombre inchangé). */
+function THEME() {
+  const light = document.documentElement.getAttribute("data-theme") === "light";
+  return light ? {
+    grid: "rgba(0,0,0,0.10)", tick: "#6B7280", axisLabel: "#4A4E57",
+    tooltipBg: "rgba(255,255,255,0.98)", tooltipBorder: "rgba(0,0,0,0.12)",
+    tooltipTitle: "#14161A", tooltipBody: "#4A4E57",
+    pointBorder: "rgba(255,255,255,0.95)",
+    svgGrid: "rgba(20,30,55,0.14)", svgGridSoft: "rgba(20,30,55,0.10)", svgAxisText: "rgba(20,30,55,0.55)",
+    heatText: "#14161A", heatHover: "rgba(0,0,0,0.05)", heatBorder: "rgba(0,0,0,0.06)"
+  } : {
+    grid: "rgba(255,255,255,0.06)", tick: "#8C9098", axisLabel: "#A0A3AC",
+    tooltipBg: "rgba(22,22,26,0.97)", tooltipBorder: "rgba(255,255,255,0.12)",
+    tooltipTitle: "#F4F4F2", tooltipBody: "#A0A3AC",
+    pointBorder: "rgba(255,255,255,0.9)",
+    svgGrid: "rgba(255,255,255,0.12)", svgGridSoft: "rgba(255,255,255,0.06)", svgAxisText: "rgba(255,255,255,0.35)",
+    heatText: "#FFF7F2", heatHover: "rgba(255,255,255,0.04)", heatBorder: "rgba(255,255,255,0.04)"
+  };
+}
+
+function applyTheme(theme) {
+  const t = theme === "light" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem("ddd_theme", t);
+}
+function toggleTheme() {
+  const next = document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light";
+  applyTheme(next);
+  if (STATE.donnees && STATE.donnees.clients && STATE.donnees.clients.length) renderAll();
+}
+
 // ============ CHARTS ============
-/** Config tooltip partagée — style glass dark cohérent avec les cartes */
+/** Config tooltip partagée — adaptée au thème courant */
 function glassTooltip(extra = {}) {
+  const c = THEME();
   return Object.assign({
-    backgroundColor: "rgba(22,22,26,0.97)",
-    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: c.tooltipBg,
+    borderColor: c.tooltipBorder,
     borderWidth: 1,
     padding: 12,
     cornerRadius: 8,
-    titleColor: "#F4F4F2",
-    bodyColor: "#A0A3AC",
+    titleColor: c.tooltipTitle,
+    bodyColor: c.tooltipBody,
     titleFont: { family: "Inter", weight: "600" },
     bodyFont: { family: "Inter" },
     displayColors: false
@@ -4391,7 +4553,7 @@ function renderMonthlyChart(metric = "vues") {
         fill: true,
         tension: 0.3,
         pointBackgroundColor: "#FF5C1A",
-        pointBorderColor: "rgba(255,255,255,0.9)",
+        pointBorderColor: THEME().pointBorder,
         pointBorderWidth: 1.5,
         pointRadius: 3,
         pointHoverRadius: 6
@@ -4411,13 +4573,13 @@ function renderMonthlyChart(metric = "vues") {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#8C9098", font: { family: "Inter", size: 11 } }
+          ticks: { color: THEME().tick, font: { family: "Inter", size: 11 } }
         },
         y: {
-          grid: { color: "rgba(255,255,255,0.06)" },
+          grid: { color: THEME().grid },
           border: { display: false },
           ticks: {
-            color: "#8C9098",
+            color: THEME().tick,
             font: { family: "Inter", size: 11 },
             callback: (v) => new Intl.NumberFormat("fr-FR").format(v)
           }
@@ -4487,10 +4649,10 @@ function renderCompChart(metric = "vues") {
       },
       scales: {
         x: {
-          grid: { color: "rgba(255,255,255,0.06)" },
+          grid: { color: THEME().grid },
           border: { display: false },
           ticks: {
-            color: "#8C9098",
+            color: THEME().tick,
             font: { family: "Inter", size: 11 },
             callback: (v) => metric.includes("taux") ? v + " %" : new Intl.NumberFormat("fr-FR").format(v)
           }
@@ -4498,7 +4660,7 @@ function renderCompChart(metric = "vues") {
         y: {
           grid: { display: false },
           ticks: {
-            color: "#8C9098",
+            color: THEME().tick,
             font: { family: "Inter", size: 11 }
           }
         }
@@ -4586,7 +4748,7 @@ function renderExecRanking() {
     .slice(0, 8);
 
   if (sorted.length === 0) {
-    rankEl.innerHTML = `<div style="padding:20px; color:rgba(255,255,255,0.5); text-align:center;">${t("exec_no_data")}</div>`;
+    rankEl.innerHTML = `<div style="padding:20px; color:var(--text-muted); text-align:center;">${t("exec_no_data")}</div>`;
     return;
   }
 
@@ -5558,7 +5720,7 @@ function renderTimeline() {
 
   let svgContent = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="min-width:${W}px;height:${H}px;display:block;">`;
   // Axe X
-  svgContent += `<line x1="${PAD.l}" y1="${H - PAD.b}" x2="${W - PAD.r}" y2="${H - PAD.b}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`;
+  svgContent += `<line x1="${PAD.l}" y1="${H - PAD.b}" x2="${W - PAD.r}" y2="${H - PAD.b}" stroke="${THEME().svgGrid}" stroke-width="1"/>`;
 
   // Mois labels
   const months = [];
@@ -5570,8 +5732,8 @@ function renderTimeline() {
   }
   months.forEach(m => {
     const x = PAD.l + ((m.getTime() - minD) / span) * (W - PAD.l - PAD.r);
-    svgContent += `<line x1="${x}" y1="${PAD.t}" x2="${x}" y2="${H - PAD.b}" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="3,3"/>`;
-    svgContent += `<text x="${x}" y="${H - 8}" font-size="9" fill="rgba(255,255,255,0.35)" text-anchor="middle" font-family="Inter">${m.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'})}</text>`;
+    svgContent += `<line x1="${x}" y1="${PAD.t}" x2="${x}" y2="${H - PAD.b}" stroke="${THEME().svgGridSoft}" stroke-width="1" stroke-dasharray="3,3"/>`;
+    svgContent += `<text x="${x}" y="${H - 8}" font-size="9" fill="${THEME().svgAxisText}" text-anchor="middle" font-family="Inter">${m.toLocaleDateString('fr-FR',{month:'short',year:'2-digit'})}</text>`;
   });
 
   arr.forEach((c, i) => {
@@ -5598,7 +5760,7 @@ function renderHeatmap() {
   const container = document.getElementById("regionHeatmap");
   if (!container) return;
   const clients = STATE.clientsAffiches || [];
-  const REGIONS = ["FR","MENA","ASIA","AMLAT","EUROPE","AFR","ENG"];
+  const REGIONS = ["FR","MENA","ASIA","AMLAT","EUROPE","AFR"];
   const KPIS    = [
     { key:"vuesUniques",    label:"Vues" },
     { key:"emailsCibles",   label:"Emails" },
@@ -5633,19 +5795,19 @@ function renderHeatmap() {
   html += `</tr></thead><tbody>`;
 
   REGIONS.forEach((r, ri) => {
-    html += `<tr class="heatmap-row" style="transition:background .12s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background=''">`;
+    html += `<tr class="heatmap-row" style="transition:background .12s;" onmouseover="this.style.background='${THEME().heatHover}'" onmouseout="this.style.background=''">`;
     html += `<td style="padding:8px 12px;font-weight:600;font-size:11px;color:var(--text-secondary);white-space:nowrap;">${r}</td>`;
     KPIS.forEach(k => {
       const val  = data[r][k.key];
       const norm = val / colMax[k.key];
       const bg   = `rgba(255,92,26,${(norm * 0.45).toFixed(2)})`;
-      const tc   = norm > 0.5 ? '#FFF7F2' : 'var(--text-secondary)';
+      const tc   = norm > 0.5 ? THEME().heatText : 'var(--text-secondary)';
       const disp = val > 0
         ? (k.key === "tauxOuverture" || k.key === "tauxClic"
             ? val.toFixed(1) + "%"
             : Math.round(val).toLocaleString("fr-FR"))
         : "—";
-      html += `<td style="padding:8px 10px;text-align:center;background:${bg};color:${tc};font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid rgba(255,255,255,0.04);transition:all .2s;">${disp}</td>`;
+      html += `<td style="padding:8px 10px;text-align:center;background:${bg};color:${tc};font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid ${THEME().heatBorder};transition:all .2s;">${disp}</td>`;
     });
     html += `</tr>`;
   });
