@@ -2305,11 +2305,11 @@ section { margin-bottom: 34px; }
   animation: geoFlow 1.4s linear infinite;
 }
 @keyframes geoFlow { to { stroke-dashoffset: -28; } }
-.geo-hub-pulse { transform-box: fill-box; transform-origin: center; animation: geoPulse 2.4s ease-out infinite; }
+.geo-hub-pulse { transform-box: fill-box; transform-origin: center; animation: geoPulse 2.6s ease-out infinite; }
 @keyframes geoPulse {
-  0%   { transform: scale(1);   opacity: 0.55; }
-  70%  { transform: scale(2.6); opacity: 0; }
-  100% { transform: scale(2.6); opacity: 0; }
+  0%   { transform: scale(1);   opacity: 0.45; }
+  70%  { transform: scale(1.8); opacity: 0; }
+  100% { transform: scale(1.8); opacity: 0; }
 }
 .geo-label {
   font-family: var(--font-display);
@@ -2384,7 +2384,9 @@ section { margin-bottom: 34px; }
   transform: translate(-50%, -120%);
   white-space: nowrap;
   z-index: 5;
+  transition: opacity var(--t-fast);
 }
+.geo-tooltip.below { transform: translate(-50%, 16%); }
 .geo-tooltip .gt-region { font-family: var(--font-display); font-weight: 700; }
 .geo-tooltip .gt-row { color: var(--text-secondary); font-size: 11px; margin-top: 2px; }
 .geo-tooltip .gt-row b { color: var(--text-primary); font-family: var(--font-mono); font-weight: 500; }
@@ -5750,7 +5752,7 @@ function renderMediaIntel() {
 // équirectangulaire identique au tracé des continents (viewBox 1000×500).
 const GEO_REGIONS = {
   FR:     { lon: 2.3,  lat: 48.8, color: "#4D7FEE", name: "France" },
-  EUROPE: { lon: 16,   lat: 52,   color: "#8B7CF6", name: "Europe" },
+  EUROPE: { lon: 26,   lat: 56,   color: "#8B7CF6", name: "Europe" },
   MENA:   { lon: 42,   lat: 27,   color: "#F5A623", name: "MENA" },
   AFR:    { lon: 21,   lat: 3,    color: "#E5484D", name: "Afrique" },
   ASIA:   { lon: 104,  lat: 20,   color: "#2BC8C4", name: "Asie" },
@@ -5800,7 +5802,7 @@ function renderWorldMap(metric) {
   }
 
   const maxV = Math.max(...rows.map(r => r[metric]));
-  const minR = 11, maxR = 44;
+  const minR = 10, maxR = 30;
   const [hx, hy] = geoProj(GEO_HUB[0], GEO_HUB[1]);
 
   let arcs = "", bubbles = "", labels = "";
@@ -5821,7 +5823,7 @@ function renderWorldMap(metric) {
     if (idx === 0) {
       bubbles += `<circle class="geo-hub-pulse" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${g.color}"/>`;
     }
-    bubbles += `<circle class="geo-bubble-halo" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 1.75).toFixed(1)}" fill="${g.color}" opacity="0.14"/>`;
+    bubbles += `<circle class="geo-bubble-halo" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(r * 1.5).toFixed(1)}" fill="${g.color}" opacity="0.13"/>`;
     bubbles += `<circle class="geo-bubble" data-region="${row.region}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="${g.color}" fill-opacity="0.82" stroke="${g.color}" stroke-width="1.5"/>`;
 
     // étiquette région (code) sous la bulle
@@ -5845,8 +5847,12 @@ function renderWorldMap(metric) {
         + `<div class="gt-row">${t("map_metric_pickups")} : <b>${fmtNum(row.pickups)}</b></div>`
         + `<div class="gt-row">${t("map_metric_views")} : <b>${fmtNum(row.vues)}</b></div>`;
       const cr = card.getBoundingClientRect(); const br = node.getBoundingClientRect();
-      tip.style.left = (br.left - cr.left + br.width / 2) + "px";
-      tip.style.top  = (br.top - cr.top) + "px";
+      const leftPx = br.left - cr.left + br.width / 2;
+      const topPx  = br.top - cr.top;
+      tip.style.left = Math.max(70, Math.min(cr.width - 70, leftPx)) + "px";
+      // si la bulle est trop haute, afficher l'infobulle en dessous
+      if (topPx < 84) { tip.style.top = (br.bottom - cr.top) + "px"; tip.classList.add("below"); }
+      else            { tip.style.top = topPx + "px";                tip.classList.remove("below"); }
       tip.hidden = false;
     });
     node.addEventListener("mouseleave", () => { if (tip) tip.hidden = true; });
